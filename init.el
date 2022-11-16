@@ -1,33 +1,21 @@
-  ;; -*- lexical-binding: t; -*-
-  ;; The default is 800 kilobytes.  Measured in bytes.
-  (setq gc-cons-threshold (* 50 1000 1000))
+;; -*- lexical-binding: t; -*-
+;; The default is 800 kilobytes.  Measured in bytes.
+(setq gc-cons-threshold (* 50 1000 1000))
 
-  ;; Profile emacs startup
-  (add-hook 'emacs-startup-hook
-            (lambda ()
-              (message "*** Emacs loaded in %s seconds with %d garbage collections."
-                       (emacs-init-time "%.2f")
-                       gcs-done)))
-
-(setq inhibit-startup-message t)
-
-(setq package-native-compile t)
-(scroll-bar-mode -1)
-(tool-bar-mode -1)
-(tooltip-mode -1)
-(set-fringe-mode 10)
-
-(menu-bar-mode -1)
-(setq visible-bell nil)
+;; Profile emacs startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "*** Emacs loaded in %s seconds with %d garbage collections."
+                     (emacs-init-time "%.2f")
+                     gcs-done)))
 
   ;;; Line number config
-(column-number-mode)
-(global-display-line-numbers-mode t)
-(menu-bar--display-line-numbers-mode-relative)
-
+(setq scroll-step 1)
+(setq scroll-margin 2)
 (dolist (mode '(term-mode-hook
                 org-mode-hook
                 helpful-mode-hook
+                vterm-mode-hook
                 ibuffer-mode-hook
                 shell-mode-hook
                 treemacs-mode-hook
@@ -38,45 +26,43 @@
 (setq user-emacs-directory (expand-file-name "~/.emacs.d/.cache/")
       url-history-file (expand-file-name "url/history" user-emacs-directory))
 
-;; Silence compiler warnings as they can be pretty disruptive
-(setq native-comp-async-report-warnings-errors nil)
-
 ;; Set the right directory to store the native comp cache
 (add-to-list 'native-comp-eln-load-path (expand-file-name ".cache/eln-cache/" user-emacs-directory))
 
-  (defvar arko/default-font-size 95)
+(defvar arko/default-font-size 90)
 
-  (set-face-attribute 'default nil :font "JetBrains Mono" :height arko/default-font-size)
-  (set-face-attribute 'fixed-pitch nil :font "JetBrains Mono" :height 93 :weight 'medium)
-  (set-face-attribute 'variable-pitch nil :font "Cantarell" :height 130 :weight 'regular)
+(set-face-attribute 'default nil :font "JetBrains Mono" :height arko/default-font-size)
+(set-face-attribute 'fixed-pitch nil :font "JetBrains Mono" :height arko/default-font-size :weight 'regular)
+(set-face-attribute 'variable-pitch nil :font "Julee" :height 132 :weight 'regular)
+(variable-pitch-mode 1)
 
-  (custom-set-variables '(font-lock-support-mode 'tree-sitter-lock-mode))
+(custom-set-variables '(font-lock-support-mode 'tree-sitter-lock-mode))
 
-  (defun arko/org-font-setup ()
-    ;; Replace list hyphen with dot
-    (font-lock-add-keywords 'org-mode
-                            '(("^ *\\([-]\\) "
-                               (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+(defun arko/org-font-setup ()
+  ;; Replace list hyphen with dot
+  (font-lock-add-keywords 'org-mode
+                          '(("^ *\\([-]\\) "
+                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 
-    ;; Set faces for heading levels
-    (dolist (face '((org-level-1 . 1.2)
-                    (org-level-2 . 1.1)
-                    (org-level-3 . 1.05)
-                    (org-level-4 . 1.0)
-                    (org-level-5 . 1.1)
-                    (org-level-6 . 1.1)
-                    (org-level-7 . 1.1)
-                    (org-level-8 . 1.1)))
-      (set-face-attribute (car face) nil :font "JetBrains Mono" :weight 'regular :height (cdr face)))
+  ;; Set faces for heading levels
+  (dolist (face '((org-level-1 . 1.3)
+                  (org-level-2 . 1.14)
+                  (org-level-3 . 1.07)
+                  (org-level-4 . 1.04)
+                  (org-level-5 . 1.02)
+                  (org-level-6 . 1.02)
+                  (org-level-7 . 1.02)
+                  (org-level-8 . 1.02)))
+    (set-face-attribute (car face) nil :font "JetBrains Mono" :weight 'regular :height (cdr face)))
 
-    ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-    (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
-    (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch))
-    (set-face-attribute 'org-table nil   :inherit '(shadow fixed-pitch))
-    (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-    (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-    (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-    (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
+  ;; Ensure that anything that should be fixed-pitch in Org files appears that way
+  (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-verbatim nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
 
 ;; Initialize package sources
 (require 'package)
@@ -96,10 +82,10 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
-  (use-package no-littering)
+(use-package no-littering)
 
-  (setq auto-save-file-name-transforms
-	`((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
+(setq auto-save-file-name-transforms
+      `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
 
 (use-package projectile
   :diminish projectile-mode
@@ -112,6 +98,7 @@
 
 (use-package counsel-projectile
   :config (counsel-projectile-mode))
+(use-package treemacs-projectile)
 
 (use-package magit
   :custom
@@ -156,6 +143,174 @@
 
 (use-package emojify
     :hook (after-init . global-emojify-mode))
+
+  (use-package which-key
+    :init (which-key-mode)
+    :diminish which-key-mode
+    :config
+    (setq which-key-idle-delay 0.4))
+
+;; Emacs mode for following modes
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+
+(use-package evil
+  :init
+  (setq evil-want-integration t
+        evil-want-keybinding nil
+        evil-want-C-u-scroll t
+        evil-want-C-d-scroll t
+        evil-want-C-i-jump nil)
+
+  :config
+  (evil-mode 1)
+  (setq evil-redo-function 'undo-redo)
+
+  (evil-global-set-key 'motion "j" 'evil-next-visual-line)
+  (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+  (evil-global-set-key 'motion "L" 'next-buffer)
+  (evil-global-set-key 'motion "H" 'previous-buffer)
+  (evil-global-set-key 'motion "E" 'evil-end-of-visual-line)
+  (evil-global-set-key 'motion ";" 'counsel-M-x)
+
+  (evil-set-initial-state 'messages-buffer-mode 'normal)
+  (evil-set-initial-state 'dashboard-mode 'normal))
+
+(use-package evil-collection
+  :after evil
+  :ensure t
+  :custom
+  (evil-collection-setup-minibuffer t)
+  :config
+  (evil-collection-init))
+
+(require 'treemacs-evil)
+
+;; (defun my-j ()
+;;   "Read a char.  If `k' then invoke `evil-normal-state'.  Else insert it."
+;;   (interactive)
+;;   (let ((ch  (read-char-exclusive)))
+;;     (if (eq ?k ch)
+;;         (evil-normal-state)
+;;       (insert "j" (string ch)))))
+
+;; (defun my-k ()
+;;   "Read a char.  If `k' then invoke `evil-normal-state'.  Else insert it."
+;;   (interactive)
+;;   (let ((ch  (read-char-exclusive)))
+;;     (if (eq ?j ch)
+;;         (evil-normal-state)
+;;       (insert "k" (string ch)))))
+
+;; (global-set-key "j" 'my-j)
+;; (global-set-key "k" 'my-k)
+
+(use-package general)
+
+(define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+(define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
+
+(general-evil-setup)
+
+(general-create-definer arko/leader-keys
+  :keymaps '(normal visual emacs treemacs-mode eww-mode)
+  :prefix "SPC")
+
+;; First level Keymaps
+(arko/leader-keys
+  "tt" '(counsel-load-theme :which-key "choose theme")
+  "p" '(projectile-command-map :which-key "Project")
+  "w" '(evil-window-map :which-key "Window")
+
+  "qq"'(save-buffers-kill-terminal :which-key "Exit Emacs")
+
+  "e" '(treemacs-select-window :which-key "Treemacs Toggle"))
+
+;; SPC f
+(arko/leader-keys
+  :prefix "SPC f"
+  "s" '(save-buffer :which-key "Save Buffer")
+  "o" '(counsel-find-file :which-key "Open File")
+  "r" '(counsel-recentf :which-key "Open File"))
+
+;; Code action keymaps
+(arko/leader-keys
+  :prefix "SPC c"
+  "e" '(eval-last-sexp :which-key "Eval last sexp"))
+
+;; SPC h
+(arko/leader-keys
+  :prefix "SPC h"
+  "f" '(counsel-describe-function :which-key "Describe Function")
+  "v" '(counsel-describe-variable :which-key "Describe Variable"))
+
+
+;; SPC O
+(arko/leader-keys
+  :prefix "SPC o"
+  "T" '(vterm :which-key "Open Term")
+  "t" '(vterm-other-window :which-key "Open Term")
+  "i" '(counsel-imenu :which-key "IMenu")
+  "b" '(eww :which-key "eww")
+  "e" '(eshell :which-key "Eshell"))
+
+;; Orgmode
+(defun org-run-code-block ()
+  (interactive)
+  (org-ctrl-c-ctrl-c)
+  (org-display-inline-images))
+(arko/leader-keys
+  :prefix "SPC oo"
+  "r" '(org-run-code-block :which-key "Run Code block")
+  "v" '(org-display-inline-images :which-key "Display inline Images"))
+
+
+(arko/leader-keys
+  :prefix "SPC b"
+  
+  "l" '(evil-switch-to-windows-last-buffer :which-key "Kill Buffer")
+  "k" '(kill-this-buffer :which-key "Kill Buffer")
+  "f" '(counsel-switch-buffer :which-key "Switch Buffer")
+  "d" '(kill-buffer :which-key "Find & Kill"))
+
+
+(arko/leader-keys
+  :prefix "SPC m" 
+  "m" '(counsel-major :which-key "Major modes")
+  "n" '(emms-next :which-key "Next")
+  "s" '(emms-stop :which-key "Next")
+  "h" '(emms-seek-backward :which-key "Seek backward")
+  "l" '(emms-seek-forward :which-key "Seek forward")
+  "j" '(emms-toggle-random-playlist :which-key "Sufftle")
+  "d" '(emms-play-directory :which-key "Play the dir")
+  "p" '(emms-play-directory :which-key "Play the dir")
+  "p" '(emms-previous :which-key "Previous")
+  "rt" '(emms-toggle-repeat-track :which-key "Repeat Track")
+  "rp" '(emms-toggle-repeat-playlist :which-key "Repeat Playlist")
+  "SPC" '(emms-pause :which-key "Play/Pause"))
+
+(general-define-key
+ :states 'motion
+ "C-k" 'evil-scroll-line-up
+ "C-j" 'evil-scroll-line-down)
+
+(general-def 'normal emacs-lisp-mode-map 
+  "K" 'elisp-slime-nav-describe-elisp-thing-at-point)
+
+(general-def 'normal lsp-mode-map
+  "K" 'lsp-describe-thing-at-point)
+
+  (use-package hydra)
+
+  (defhydra hydra-text-scale (:timeout 4)
+    "scale text"
+    ("j" text-scale-increase "in")
+    ("k" text-scale-decrease "out")
+    ("f" nil "finished" :exit t))
+
+  (general-nmap
+    :prefix "SPC"
+    "ts" '(hydra-text-scale/body :which-key "scale text"))
+  ;;
 
 (use-package tree-sitter)
 (use-package tree-sitter-langs)
@@ -237,46 +392,44 @@
             ivy-posframe-max-width 220)
     (ivy-posframe-mode 1))
 
-    (use-package treemacs
-	:init
-	:config
-	(setq treemacs-deferred-git-apply-delay        0.5
-	    treemacs-directory-name-transformer      #'identity
-	    treemacs-display-in-side-window          t
-	    treemacs-eldoc-display                   'simple
-	    treemacs-file-event-delay                5000
-	    treemacs-file-follow-delay               0.2
-	    treemacs-file-name-transformer           #'identity
-	    treemacs-follow-after-init               t
-	    treemacs-expand-after-init               t
-	    treemacs-is-never-other-window           nil
-	    treemacs-missing-project-action          'remove
-	    treemacs-move-forward-on-expand          nil
-	    treemacs-position                        'left
-	    treemacs-recenter-after-project-jump     'always
-	    treemacs-recenter-after-project-expand   'on-distance
-	    treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
-	    treemacs-show-cursor                     nil
-	    treemacs-sorting                         'alphabetic-asc
-	    treemacs-select-when-already-in-treemacs 'move-back
-	    treemacs-space-between-root-nodes        t
-	    treemacs-tag-follow-cleanup              t
-	    treemacs-tag-follow-delay                0.5
-	    treemacs-wide-toggle-width               70
-	    treemacs-width                           35
-	    treemacs-width-increment                 1
-	    treemacs-workspace-switch-cleanup        nil)
-	(treemacs-load-theme "all-the-icons"))
-
+(use-package treemacs
+  :init
+  :config
+  (setq treemacs-deferred-git-apply-delay        0.5
+        treemacs-directory-name-transformer      #'identity
+        treemacs-display-in-side-window          t
+        treemacs-eldoc-display                   'simple
+        treemacs-file-event-delay                5000
+        treemacs-file-follow-delay               0.2
+        treemacs-file-name-transformer           #'identity
+        treemacs-follow-after-init               t
+        treemacs-expand-after-init               t
+        treemacs-is-never-other-window           nil
+        treemacs-missing-project-action          'remove
+        treemacs-move-forward-on-expand          nil
+        treemacs-position                        'left
+        treemacs-recenter-after-project-jump     'always
+        treemacs-recenter-after-project-expand   'on-distance
+        treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
+        treemacs-show-cursor                     nil
+        treemacs-sorting                         'alphabetic-asc
+        treemacs-select-when-already-in-treemacs 'move-back
+        treemacs-space-between-root-nodes        t
+        treemacs-tag-follow-cleanup              t
+        treemacs-tag-follow-delay                0.5
+        treemacs-wide-toggle-width               70
+        treemacs-width                           35
+        treemacs-width-increment                 1
+        treemacs-workspace-switch-cleanup        nil))
 
 (use-package treemacs-all-the-icons)
-(require 'treemacs-all-the-icons)
+(treemacs-load-theme "all-the-icons")
 
 (use-package all-the-icons
     :ensure t)
 
 (use-package doom-themes
-    :init (load-theme 'doom-one t))
+    :init (load-theme 'doom-outrun-electric t))
 
 ;; (use-package modus-themes)
 
@@ -299,157 +452,23 @@
     ([remap describe-variable] . counsel-describe-variable)
     ([remap describe-key] . helpful-key))
 
-  (use-package which-key
-    :init (which-key-mode)
-    :diminish which-key-mode
-    :config
-    (setq which-key-idle-delay 0.4))
-
-;; Emacs mode for following modes
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-
-(use-package evil
-  :init
-  (setq evil-want-integration t
-        evil-want-keybinding nil
-        evil-want-C-u-scroll t
-        evil-want-C-d-scroll t
-        evil-want-C-i-jump nil)
-
-  :config
-  (evil-mode 1)
-  (setq evil-redo-function 'undo-redo)
-
-  (evil-global-set-key 'motion "j" 'evil-next-visual-line)
-  (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
-  (evil-global-set-key 'motion "L" 'next-buffer)
-  (evil-global-set-key 'motion "H" 'previous-buffer)
-  (evil-global-set-key 'motion "E" 'evil-end-of-visual-line)
-  (evil-global-set-key 'motion ";" 'counsel-M-x)
-
-  (evil-set-initial-state 'messages-buffer-mode 'normal)
-  (evil-set-initial-state 'dashboard-mode 'normal))
-
-(use-package evil-collection
-  :after evil
-  :ensure t
-  :config
-  (evil-collection-init))
-
-(use-package general)
-
-(define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
-(define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
-
-(general-evil-setup)
-
-(general-define-key
- :states 'normal
- "C-k" 'evil-scroll-line-up
- "C-j" 'evil-scroll-line-down)
-
-(general-nmap
-  :prefix "SPC"
-  "tt" '(counsel-load-theme :which-key "choose theme")
-
-  "bk" '(kill-this-buffer :which-key "Kill Buffer")
-  "bf" '(counsel-switch-buffer :which-key "Switch Buffer")
-
-  "p" '(projectile-command-map :which-key "Project")
-
-  ;;; Keymaps for opening stuff
-  "ot" '(vterm :which-key "Open Term")
-  "oi" '(counsel-imenu :which-key "IMenu")
-  "ob" '(eww :which-key "eww")
-
-  ;; Code related keymaps
-  "ce" '(eval-last-sexp :which-key "Eval last sexp")
-
-  "w" '(evil-window-map :which-key "Window")
-
-  "hf" '(counsel-describe-function :which-key "Describe Function")
-  "hv" '(counsel-describe-variable :which-key "Describe Variable")
-
-  "qq"'(save-buffers-kill-terminal :which-key "Exit Emacs")
-
-  "fs" '(save-buffer :which-key "Save Buffer")
-  "fo" '(counsel-find-file :which-key "Open File")
-  "fr" '(counsel-recentf :which-key "Open File")
-
-  "e" '(treemacs :which-key "Treemacs Toggle"))
-
-;;; Emms Keymaps
-(general-nmap
-  :prefix "SPC m" :which-key "Emms"
-  "n" '(emms-next :which-key "Next")
-  "s" '(emms-stop :which-key "Next")
-  "j" '(emms-toggle-random-playlist :which-key "Sufftle")
-  "d" '(emms-play-directory :which-key "Play the dir")
-  "p" '(emms-play-directory :which-key "Play the dir")
-  "p" '(emms-previous :which-key "Previous")
-  "rt" '(emms-toggle-repeat-track :which-key "Repeat Track")
-  "rp" '(emms-toggle-repeat-playlist :which-key "Repeat Playlist")
-  "SPC" '(emms-pause :which-key "Play/Pause"))
-
-(when org-mode-hook
-  (general-nmap
-    :prefix "SPC oo"
-    "v" '(org-display-inline-images :which-key "Display inline Images")))
-
-
-;; (general-create-definer arko/leader-keys
-;;   :keymaps '(normal insert visual emacs)
-;;   :prefix "SPC"
-;;   :global-prefix "M-SPC")
-
-;; (arko/leader-keys
-;;   "tt" '(counsel-load-theme :which-key "choose theme")
-;;   "bk" '(kill-this-buffer :which-key "Kill Buffer")
-;;   "bf" '(counsel-switch-buffer :which-key "Switch Buffer")
-;;   "p" '(projectile-command-map :which-key "Project")
-;;   "ot" '(vterm :which-key "Open Term")
-;;   "ce" '(eval-last-sexp :which-key "Eval last sexp")
-;;   "w" '(evil-window-map :which-key "Window")
-;;   "hf" '(counsel-describe-function :which-key "Describe Function")
-;;   "hv" '(counsel-describe-variable :which-key "Describe Variable")
-;;   "qq"'(save-buffers-kill-terminal :which-key "Exit Emacs")
-;;   "fs" '(save-buffer :which-key "Save Buffer")
-;;   "fo" '(counsel-find-file :which-key "Open File")
-;;   "fc" '(coun :which-key "Open Term")
-;;   "e" '(treemacs :which-key "Treemacs Toggle"))
-
-
-
-  (use-package hydra)
-
-  (defhydra hydra-text-scale (:timeout 4)
-    "scale text"
-    ("j" text-scale-increase "in")
-    ("k" text-scale-decrease "out")
-    ("f" nil "finished" :exit t))
-
-  (general-nmap
-    :prefix "SPC"
-    "ts" '(hydra-text-scale/body :which-key "scale text"))
-  ;;
-
 (defun arko/lsp-mode-setup ()
-(setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols)))
+  (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols)))
 
 (use-package lsp-mode
-    :hook (lsp-mode . arko/lsp-mode-setup)
-    :commands (lsp lsp-deferred)
-    :init
-    (setq lsp-keymap-prefix "C-l")
-    :config
-    (lsp-enable-which-key-integration t))
+  :hook (lsp-mode . arko/lsp-mode-setup)
+  :commands (lsp lsp-deferred)
+  :init
+  (setq lsp-keymap-prefix "C-l")
+  :config
+  (lsp-enable-which-key-integration t))
 
 (use-package lsp-ui
-    :after lsp-mode
-    :config
-    (lsp-ui-mode)
-    (lsp-ui-doc-enable t)
-    (setq lsp-ui-doc-delay 0.4
+  :after lsp-mode
+  :config
+  (lsp-ui-mode)
+  (lsp-ui-doc-enable t)
+  (setq lsp-ui-doc-delay 0.4
         lsp-ui-doc-position 'top
         lsp-ui-doc-max-height 12
         lsp-ui-doc-max-width 90
@@ -457,6 +476,8 @@
         lsp-ui-doc-show-with-mouse t))
 
 (use-package lsp-ivy)
+
+(use-package dap-mode)
 
 (use-package lsp-treemacs
     :after lsp)
@@ -489,25 +510,40 @@
 (use-package yasnippet)
 (yas-global-mode 1)
 
-(use-package rust-mode)
+(use-package rust-mode
+  :ensure t
+  :hook ((rust-mode . flycheck-mode)
+	 (rust-mode . lsp-deferred))
+  :config
+  (setq rust-format-on-save t))
 
 (add-hook 'rust-mode-hook
         (lambda () (setq indent-tabs-mode nil)))
-(setq rust-format-on-save t)
 
 (setq lsp-clangd-binary-path "/bin/clangd")
+(add-hook 'c-mode-hook 'lsp)
+(add-hook 'c++-mode-hook 'lsp)
+
+(with-eval-after-load 'lsp-mode
+  (require 'dap-cpptools))
+
+(use-package glsl-mode)
+
+(use-package qml-mode)
 
 (use-package python-mode
-  :ensure t)
+  :ensure t
+  :hook (python-mode . lsp-deferred))
 
 (use-package jupyter
   :ensure t)
-;; (use-package ein)
-;; (setq ein:output-area-inlined-images t
-;;     ob-ein-inline-images-directory "~/.emacs.d/ob-ein-images")
+(use-package ein)
+(setq ein:output-area-inlined-images t
+    ob-ein-inline-image-directory "~/.emacs.d/.cache/ob-ein-images")
 
 (use-package highlight-defined)
 (use-package lispy)
+(use-package elisp-slime-nav)
 
 (use-package slime)
 (setq inferior-lisp-program "sbcl")
@@ -518,13 +554,20 @@
     :ensure t
     :hook (nim-mode . lsp))
 
+(use-package typescript-mode
+  :mode "\\.ts\\'"
+  :hook (typescript-mode . lsp-deferred)
+  :config
+  (setq typescript-indent-level 2))
+
 (use-package emmet-mode)
 
-(add-hook 'sgml-mode-hook 'emmet-mode) ;; Auto-start on any markup modes
-(add-hook 'css-mode-hook  'emmet-mode) ;; enable Emmet's css abbreviation.
-(add-to-list 'emmet-jsx-major-modes 'your-jsx-major-mode)
-
- (use-package vterm)
+(use-package vterm
+  :commands vterm
+  :config
+  (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] *")  ;; Set this to match your custom shell prompt
+  ;;(setq vterm-shell "zsh")                       ;; Set this to customize the shell to launch
+  (setq vterm-max-scrollback 10000))
 
 (use-package emms
     :config
@@ -660,13 +703,17 @@
   (setq-default shr-inhibit-images t)   ; toggle with `I`
   (setq-default shr-use-fonts nil))
 
+(use-package pdf-tools)
+
+(when (eq major-mode 'pdf-view-mode)
+  (setq display-line-numbers nil))
+
   (defun arko/org-mode-setup ()
     (setq org-src-tab-acts-natively t
           org-src-tab-acts-natively     t
           org-src-preserve-indentation  t
           org-src-fontify-natively      t)
     (org-indent-mode)
-    (variable-pitch-mode 1)
     (visual-line-mode 1))
 
   (use-package org
@@ -696,21 +743,28 @@
     (org-bullets-bullet-list '("🌩" "🚀" "✿" "✸" "●" "◉")))
 
 (org-babel-do-load-languages
-    'org-babel-load-languages
-    '((emacs-lisp . t)
-        (python . t)
-        (jupyter . t)
-        (julia . t)
-        (lua . t)))
+ 'org-babel-load-languages
+ '((emacs-lisp . t)
+   (python . t)
+   (jupyter . t)
+   (ein . t)
+   (julia . t)
+   (lua . t)))
+
 (setq org-startup-with-inline-images t)
 
 (setq org-babel-default-header-args:jupyter-python '((:async . "yes")
-                                              (:session . "python")))
+                                                     (:session . "python")
+                                                     (:kernel . "python3")))
+
+(setq org-babel-default-header-args:ein-python '((:session . "localhost:8888/emacsnotebook.ipynb")))
+
 
 (require 'org-tempo)
 (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
 (add-to-list 'org-structure-template-alist '("py" . "src python"))
-(add-to-list 'org-structure-template-alist '("jb" . "src jupyter"))
+(add-to-list 'org-structure-template-alist '("ein" . "src ein"))
+(add-to-list 'org-structure-template-alist '("jbp" . "src jupyter-python"))
 (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
 (add-to-list 'org-structure-template-alist '("jl" . "src julia"))
 
