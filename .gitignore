@@ -1,7 +1,4 @@
 
-/elpa
 .cache
-/emojis
-/auto-save-list
-/eln-cache
-/projecile*
+eln-cache
+elpa
