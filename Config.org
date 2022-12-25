@@ -72,7 +72,7 @@
 #+end_src
 
 ** Native Compilation
-Set the right directory to store the native comp cache
+Directory for storing native comp cache
 
 #+begin_src emacs-lisp
 (add-to-list 'native-comp-eln-load-path (expand-file-name "eln-cache/" user-emacs-directory))
@@ -607,6 +607,7 @@ Install =use-package.el= with optional dependencies and configure:
   "T" '(multi-vterm :which-key "Open Term")
   "t" '(split-h-vterm-window :which-key "Open Term")
   "i" '(counsel-imenu :which-key "IMenu")
+  "j" '((lambda () (interactive) (find-file "/home/scott/Books/Personal/Journal.org")) :which-key "Open Journal")
   "r" '(split-repl :which-key "Elisp REPL")
   "b" '(eww :which-key "eww")
   "e" '(eshell :which-key "Eshell"))
@@ -1162,7 +1163,13 @@ Install =use-package.el= with optional dependencies and configure:
 #+end_src
 *** Jupyter Ipython
 #+begin_src emacs-lisp
-(use-package jupyter)
+(use-package jupyter
+  :commands (jupyter-run-repl jupyter-connect-repl)
+  ;; :init
+  ;; (add-hook 'python-mode-hook #'jupyter-python-mode-hook)
+  :config
+  (setq jupyter-server-buffer-name "*jupyter-server*"))
+
 #+end_src
 
 ** Elisp
@@ -1451,6 +1458,17 @@ Install =use-package.el= with optional dependencies and configure:
 
 #+end_src
 
+** Visual Fill Col
+#+begin_src emacs-lisp
+(defun spaceorg-mode-visual-fill()
+  (setq visual-fill-column-width 150
+        visual-fill-column-center-text t)
+  (visual-fill-column-mode 1))
+
+(use-package visual-fill-column
+  :hook (org-mode . spaceorg-mode-visual-fill))
+#+end_src
+
 * Org Mode
 ** Setup
 #+begin_src emacs-lisp
@@ -1460,11 +1478,11 @@ Install =use-package.el= with optional dependencies and configure:
         org-src-preserve-indentation  t
         org-src-fontify-natively      t)
   (org-indent-mode)
+  (org-overview)
   (display-line-numbers-mode 0)
   (variable-pitch-mode t)
   (hs-minor-mode t)
   (visual-line-mode 1))
-
 
 (use-package org
   :hook (org-mode . spaceorg-mode-setup)
@@ -1476,14 +1494,6 @@ Install =use-package.el= with optional dependencies and configure:
         org-log-done 'time
         org-log-into-drawer t)
   (spaceorg-font-setup))
-
-(defun spaceorg-mode-visual-fill()
-  (setq visual-fill-column-width 150
-        visual-fill-column-center-text t)
-  (visual-fill-column-mode 1))
-
-(use-package visual-fill-column
-  :hook (org-mode . spaceorg-mode-visual-fill))
 
 
 #+end_src
@@ -1503,7 +1513,7 @@ Install =use-package.el= with optional dependencies and configure:
 (defun org-run-code-block ()
   (interactive)
   (org-ctrl-c-ctrl-c)
-  (org-display-inline-images))
+  (org-mode))
 
 (general-m
   :keymaps 'org-mode-map

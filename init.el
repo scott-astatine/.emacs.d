@@ -418,6 +418,7 @@
   "T" '(multi-vterm :which-key "Open Term")
   "t" '(split-h-vterm-window :which-key "Open Term")
   "i" '(counsel-imenu :which-key "IMenu")
+  "j" '((lambda () (interactive) (find-file "/home/scott/Books/Personal/Journal.org")) :which-key "Open Journal")
   "r" '(split-repl :which-key "Elisp REPL")
   "b" '(eww :which-key "eww")
   "e" '(eshell :which-key "Eshell"))
@@ -799,7 +800,12 @@
 ;;   :keymaps ein:ipdb-mode-map
 ;;   "d" '(ein:worksheet-delete-cell :which-key "Delete Cell"))
 
-(use-package jupyter)
+(use-package jupyter
+  :commands (jupyter-run-repl jupyter-connect-repl)
+  ;; :init
+  ;; (add-hook 'python-mode-hook #'jupyter-python-mode-hook)
+  :config
+  (setq jupyter-server-buffer-name "*jupyter-server*"))
 
 (use-package highlight-defined)
 (use-package lispy)
@@ -1027,17 +1033,25 @@
   :init
   (persp-mode))
 
+(defun spaceorg-mode-visual-fill()
+  (setq visual-fill-column-width 150
+        visual-fill-column-center-text t)
+  (visual-fill-column-mode 1))
+
+(use-package visual-fill-column
+  :hook (org-mode . spaceorg-mode-visual-fill))
+
 (defun spaceorg-mode-setup ()
   (setq org-src-tab-acts-natively t
         org-src-tab-acts-natively     t
         org-src-preserve-indentation  t
         org-src-fontify-natively      t)
   (org-indent-mode)
+  (org-overview)
   (display-line-numbers-mode 0)
   (variable-pitch-mode t)
   (hs-minor-mode t)
   (visual-line-mode 1))
-
 
 (use-package org
   :hook (org-mode . spaceorg-mode-setup)
@@ -1050,14 +1064,6 @@
         org-log-into-drawer t)
   (spaceorg-font-setup))
 
-(defun spaceorg-mode-visual-fill()
-  (setq visual-fill-column-width 150
-        visual-fill-column-center-text t)
-  (visual-fill-column-mode 1))
-
-(use-package visual-fill-column
-  :hook (org-mode . spaceorg-mode-visual-fill))
-
   (use-package org-bullets
     :after org
     :hook (org-mode . org-bullets-mode)
@@ -1067,7 +1073,7 @@
 (defun org-run-code-block ()
   (interactive)
   (org-ctrl-c-ctrl-c)
-  (org-display-inline-images))
+  (org-mode))
 
 (general-m
   :keymaps 'org-mode-map
