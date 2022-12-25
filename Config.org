@@ -641,7 +641,6 @@ Install =use-package.el= with optional dependencies and configure:
 (general-def 'normal emacs-lisp-mode-map 
   "K" 'elisp-slime-nav-describe-elisp-thing-at-point)
 
-
 #+end_src
 
 *** Projectile Keymaps
