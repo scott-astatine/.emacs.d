@@ -429,21 +429,6 @@
   "f" '(counsel-switch-buffer :which-key "Switch Buffer")
   "d" '(kill-buffer :which-key "Find & Kill"))
 
-;; (spaceleader-keys
-;;   :prefix "SPC m" 
-;;   "m" '(counsel-major :which-key "Major modes")
-;;   "n" '(emms-next :which-key "Next")
-;;   "s" '(emms-stop :which-key "Next")
-;;   "h" '(emms-seek-backward :which-key "Seek backward")
-;;   "l" '(emms-seek-forward :which-key "Seek forward")
-;;   "j" '(emms-toggle-random-playlist :which-key "Sufftle")
-;;   "d" '(emms-play-directory :which-key "Play the dir")
-;;   "p" '(emms-play-directory :which-key "Play the dir")
-;;   "p" '(emms-previous :which-key "Previous")
-;;   "rt" '(emms-toggle-repeat-track :which-key "Repeat Track")
-;;   "rp" '(emms-toggle-repeat-playlist :which-key "Repeat Playlist")
-;;   "SPC" '(emms-pause :which-key "Play/Pause"))
-
 
 (general-def 'normal emacs-lisp-mode-map 
   "K" 'elisp-slime-nav-describe-elisp-thing-at-point)
@@ -959,6 +944,21 @@
 ;;       (emms-notifications-dbus track-name))
 ;;      (t (emms-notifications-message track-name)))))
 
+;; (spaceleader-keys
+;;   :prefix "SPC m" 
+;;   "m" '(counsel-major :which-key "Major modes")
+;;   "n" '(emms-next :which-key "Next")
+;;   "s" '(emms-stop :which-key "Next")
+;;   "h" '(emms-seek-backward :which-key "Seek backward")
+;;   "l" '(emms-seek-forward :which-key "Seek forward")
+;;   "j" '(emms-toggle-random-playlist :which-key "Sufftle")
+;;   "d" '(emms-play-directory :which-key "Play the dir")
+;;   "p" '(emms-play-directory :which-key "Play the dir")
+;;   "p" '(emms-previous :which-key "Previous")
+;;   "rt" '(emms-toggle-repeat-track :which-key "Repeat Track")
+;;   "rp" '(emms-toggle-repeat-playlist :which-key "Repeat Playlist")
+;;   "SPC" '(emms-pause :which-key "Play/Pause"))
+
 (with-eval-after-load 'eww
   (setq-local endless/display-images t)
   (defun endless/toggle-image-display ()
@@ -1035,7 +1035,9 @@
   (org-indent-mode)
   (display-line-numbers-mode 0)
   (variable-pitch-mode t)
+  (hs-minor-mode t)
   (visual-line-mode 1))
+
 
 (use-package org
   :hook (org-mode . spaceorg-mode-setup)
