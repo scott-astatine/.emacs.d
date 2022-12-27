@@ -171,15 +171,28 @@
         (write-region "" nil (concat project-root ".runconf")))
     
     (when run-command
-      (set-frame-name "project-runner")
-      (split-h-vterm-window)
-      (general-define-key
-       :keymaps 'local
-       "C-c" 'vterm--self-insert
-       "q" '(lambda () (interactive) (kill-this-buffer)))
+      (save-buffer)
+      (split-window-below-with-height 14)
+      (if (get-buffer "Runner")
+          (kill-buffer "Runner"))
 
-      (vterm-send-string (concat "cd " project-root " && " run-command "\n"))
-      (windmove-up))))
+      (term (concat "cd " project-root " && " run-command "\n"))
+      (general-def
+       :keymaps 'local
+       :states '(normal insert)
+       "C-c" 'vterm--self-insert
+       "C-d" '(lambda () (interactive) (kill-this-buffer))
+       "q" '(lambda () (interactive) (kill-this-buffer)))
+      ;; (vterm-send-string (concat "cd " project-root " && " run-command "\n"))
+      (set-frame-name "project-runner")
+      (setq splitwin (selected-window))
+      (rename-buffer "Runner")
+      (add-hook 'kill-buffer-hook
+                (lambda ()
+                  (when (eq splitwin (selected-window))
+                    (delete-window splitwin))))
+      (windmove-up)
+      )))
 
 
 
@@ -782,7 +795,7 @@
 
 (use-package python-mode
   :ensure t
-  :hook (python-mode . lsp-deferred))
+  :gfhook #'lsp)
 
 ;; adds syntax highlighting for reST (and epydoc) docstrings and makes filling
 ;; work as expected.(for all multi-line strings)
@@ -802,8 +815,6 @@
 
 (use-package jupyter
   :commands (jupyter-run-repl jupyter-connect-repl)
-  ;; :init
-  ;; (add-hook 'python-mode-hook #'jupyter-python-mode-hook)
   :config
   (setq jupyter-server-buffer-name "*jupyter-server*"))
 
@@ -1110,6 +1121,7 @@
 (add-to-list 'org-structure-template-alist '("py" . "src python"))
 (add-to-list 'org-structure-template-alist '("ein" . "src ein-python"))
 (add-to-list 'org-structure-template-alist '("jp" . "src jupyter-python"))
+(add-to-list 'org-structure-template-alist '("jpn" . "src jupyter-python :results none"))
 (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
 (add-to-list 'org-structure-template-alist '("jl" . "src julia"))
 
