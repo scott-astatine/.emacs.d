@@ -3,22 +3,7 @@
       pixel-scroll-precision-large-scroll-height 40.0
       url-history-file (expand-file-name "url/history" user-emacs-directory))
 
-
-(dolist (mode '(term-mode-hook
-                helpful-mode-hook
-                vterm-mode-hook
-                ielm-mode-hook
-                ibuffer-mode-hook
-                doc-view-mode-hook
-                pdf-outline-buffer-hook
-                pdf-view-mode-hook
-                shell-mode-hook
-                treemacs-mode-hook
-                eshell-mode-hook))
-  (add-hook mode (lambda ()
-                   (progn
-                     (display-line-numbers-mode 0)
-                     (undo-tree-mode 0)))))
+(load-file "~/.emacs.d/hide-mode-line.el")
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
@@ -35,7 +20,8 @@
 (set-face-attribute 'default nil :font spacedefault-code-font :height spacedefault-font-size)
 (set-face-attribute 'fixed-pitch nil :font spacedefault-code-font :height spacedefault-font-size :weight 'regular)
 
-(set-face-attribute 'variable-pitch nil :font "Leckerli One" :height 155 :weight 'regular)
+;;; Previous Font "Leckerli One" Princess Sofia
+(set-face-attribute 'variable-pitch nil :font "Pacifico" :height 165 :weight 'regular)
 
 (variable-pitch-mode t)
 
@@ -46,8 +32,6 @@
   (font-lock-add-keywords 'org-mode
                           '(("^ *\\([-]\\) "
                              (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
-
-  ;; Set faces for heading levels
   (dolist (face '((org-level-1 . 1.3)
                   (org-level-2 . 1.14)
                   (org-level-3 . 1.07)
@@ -63,11 +47,14 @@
   (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
   ;; (set-face-attribute 'org-verbatim nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  ;; (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   ;; (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
 
 (set-frame-parameter nil 'alpha '(100 . 100))
+;; (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+;; (add-to-list 'default-frame-alist '(fullscreen . maximized))
+
 (defun toggle-transparency ()
   (interactive)
   (let ((alpha (frame-parameter nil 'alpha)))
@@ -78,41 +65,41 @@
                     ;; Also handle undocumented (<active> <inactive>) form.
                     ((numberp (cadr alpha)) (cadr alpha)))
               100)
-         '(80 . 50) '(100 . 100)))))
+         '(85 . 50) '(100 . 100)))))
 (toggle-transparency)
 
-(defun set-window-height (height)
-  "Set the height of the current window to the specified HEIGHT."
-  (interactive "nWindow height: ")
-  (if (> height (window-total-height))
-      (enlarge-window (- height (window-total-height)))
-    (shrink-window (- (window-total-height) height))))
+  (defun set-window-height (height)
+    "Set the height of the current window to the specified HEIGHT."
+    (interactive "nWindow height: ")
+    (if (> height (window-total-height))
+	(enlarge-window (- height (window-total-height)))
+      (shrink-window (- (window-total-height) height))))
 
-(defun split-window-below-with-height (height)
-  "Split the current window horizontally and switch to the new window.
-   The new window will be given the specified HEIGHT."
-  (interactive "nWindow height: ")
-  (split-window-below)
-  (windmove-down)
-  (set-window-height height))
+  (defun split-window-below-with-height (height)
+    "Split the current window horizontally and switch to the new window.
+     The new window will be given the specified HEIGHT."
+    (interactive "nWindow height: ")
+    (split-window-below)
+    (windmove-down)
+    (set-window-height height))
 
-(defun set-window-width (width)
-  "Set the width of the current window to WIDTH."
-  (interactive "nNew window width: ")
-  (let ((window (get-buffer-window (current-buffer))))
-    (when window
-          (enlarge-window-horizontally width))))
+  (defun set-window-width (width)
+    "Set the width of the current window to WIDTH."
+    (interactive "nNew window width: ")
+    (let ((window (get-buffer-window (current-buffer))))
+      (when window
+	    (enlarge-window-horizontally width))))
 
-(defun split-repl ()
-  (interactive)
-  (split-window-below-with-height 15)
-  (ielm)
-  (setq splitwin (selected-window))
-  (add-hook 'kill-buffer-hook
-            (lambda ()
-              (when (eq splitwin (selected-window))
-                (delete-window (selected-window)))))
-  )
+  (defun split-repl ()
+    (interactive)
+    (split-window-below-with-height 15)
+    (ielm)
+    (setq splitwin (selected-window))
+    (add-hook 'kill-buffer-hook
+	      (lambda ()
+		(when (eq splitwin (selected-window))
+		  (delete-window (selected-window)))))
+    )
 
 (defun split-vterm (height)
   "Split vterm"
@@ -130,7 +117,8 @@
 
 (defun split-h-vterm-window ()
   (interactive)
-  (split-vterm 10))
+  (split-vterm 10)
+  (hide-mode-line-mode))
 
 (defvar project-run-cmds
   '((cargo . "cargo run")
@@ -184,7 +172,7 @@
        "C-d" '(lambda () (interactive) (kill-this-buffer))
        "q" '(lambda () (interactive) (kill-this-buffer)))
       ;; (vterm-send-string (concat "cd " project-root " && " run-command "\n"))
-      (set-frame-name "project-runner")
+      ;; (set-frame-name "project-runner")
       (setq splitwin (selected-window))
       (rename-buffer "Runner")
       (add-hook 'kill-buffer-hook
@@ -204,14 +192,47 @@
   (interactive)
   (insert (format-time-string "%H:%M")))
 
-(defun org-wrap= ()
+(defun wrap-- (m1)
   (interactive)
   (if (use-region-p)
       (progn
         (kill-region (region-beginning) (region-end))
-        (insert "=")
+        (insert m1)
         (yank)
-        (insert "="))
+        (insert m1))
+    (message "No region selected")))
+
+(defun wrap-quotes ()
+  (interactive)
+  (wrap-- "\""))
+
+(defun wrap-sb ()
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (kill-region (region-beginning) (region-end))
+        (insert "[")
+        (yank)
+        (insert "]"))
+    (message "No region selected")))
+(defun wrap-cb ()
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (kill-region (region-beginning) (region-end))
+        (insert "{")
+        (yank)
+        (insert "}"))
+    (message "No region selected")))
+
+(defun wrap-rb ()
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (kill-region (region-beginning) (region-end))
+        (insert "(")
+        (yank)
+        (insert ")"))
     (message "No region selected")))
 
 ;; Initialize package sources
@@ -328,11 +349,13 @@
   :init
   (general-evil-setup)
   :demand t)
-(general-def 'normal 'override
+
+(general-def '(normal visual) 'override
   "L" 'next-buffer
   "H" 'previous-buffer
   "E" 'evil-end-of-visual-line
   ";" 'counsel-M-x)
+
 (general-def 'normal
   "j" 'evil-next-visual-line
   "k" 'evil-previous-visual-line)
@@ -351,7 +374,7 @@
 
 
 (general-create-definer spaceleader-keys
-  :keymaps '(override treemacs-mode)
+  :keymaps 'override
   :states '(normal visual)
   :prefix "SPC")
 
@@ -360,9 +383,11 @@
   :prefix "m")
 
 (general-def 'normal 'override
- ;; "u" 'undo-tree-undo
  "K" 'lsp-describe-thing-at-point
- "g/" 'evilnc-comment-or-uncomment-lines
+ "g/" 'evilnc-comment-or-uncomment-lines)
+
+(general-def '(normal insert) 'override
+  "C-<tab>" '(counsel-switch-buffer :which-key "Switch Buffer")
  "C-k" 'evil-scroll-line-up
  "C-j" 'evil-scroll-line-down)
 
@@ -373,18 +398,22 @@
 (defun mjort ()
   (interactive)
   (funcall major-mode))
+
 (general-m
+  :keymaps 'override
   "t" '(mjort :which-key "Toogle Major Mode"))
+
 (spaceleader-keys
   "SPC" '(projectile-find-file :which-key "Find file in project")
 
   "w" '(evil-window-map :which-key "Window")
+  "l" '(lsp-mode-map :which-key "Window")
   "ww" '(set-window-width :which-key "Set Width")
   "wi" '(set-window-height :which-key "Set Height")
   "a" '(ace-select-window :which-key "Select Window")
   "qq"'(save-buffers-kill-terminal :which-key "Exit Emacs")
   "d"'(kill-this-buffer :which-key "Exit Emacs")
-  "s"'(swiper :which-key "Exit Emacs")
+  "ss"'(swiper :which-key "Search...")
 
   "e" '(treemacs-select-window :which-key "Treemacs Toggle"))
 
@@ -397,14 +426,14 @@
   "b" '(display-battery-mode :which-key "Toogle Battery")
   "v" '(visual-fill-column-mode :which-key "Center Column")
   "d" '(elcord-mode :which-key "Discord status")
-  "m" '(mjort :which-key "Toogle Major Mode"))
+  "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 (spaceleader-keys
   :prefix "SPC f"
   "s" '(save-buffer :which-key "Save Buffer")
   "o" '(counsel-find-file :which-key "Open File")
   "f" '(projectile-find-file :which-key "Find file in project")
-  "r" '(counsel-recentf :which-key "Open File"))
+  "r" '(counsel-recentf :which-key "Open Recent File"))
 
 (spaceleader-keys
   :prefix "SPC c"
@@ -417,6 +446,10 @@
 (spaceleader-keys
   :prefix "SPC i"
   "d" '(insert-current-date :which-key "Insert Date")
+  "q" '(wrap-quotes :which-key "Wrap quites")
+  "[" '(wrap-sb :which-key "Wrap []")
+  "9" '(wrap-rb :which-key "Wrap ()")
+  "]" '(wrap-cb :which-key "Wrap {}")
   "SPC" '(inspc :which-key "Insert Date")
   "t" '(insert-current-time :which-key "Insert Time")
   "e" '(emoji-insert :which-key "Insert Emoji"))
@@ -426,12 +459,17 @@
   "f" '(counsel-describe-function :which-key "Describe Function")
   "v" '(counsel-describe-variable :which-key "Describe Variable"))
 
+(defun mtt ()
+  (interactive)
+  (multi-vterm)
+  (hide-mode-line-mode))
 (spaceleader-keys
   :prefix "SPC o"
-  "T" '(multi-vterm :which-key "Open Term")
+  "T" '(mtt :which-key "Open Term")
   "t" '(split-h-vterm-window :which-key "Open Term")
   "i" '(counsel-imenu :which-key "IMenu")
   "j" '((lambda () (interactive) (find-file "/home/scott/Books/Personal/Journal.org")) :which-key "Open Journal")
+  "c" '((lambda () (interactive) (find-file "~/.emacs.d/Config.org")) :which-key "Open Config")
   "r" '(split-repl :which-key "Elisp REPL")
   "b" '(eww :which-key "eww")
   "e" '(eshell :which-key "Eshell"))
@@ -442,19 +480,6 @@
   "k" '(kill-this-buffer :which-key "Kill Buffer")
   "f" '(counsel-switch-buffer :which-key "Switch Buffer")
   "d" '(kill-buffer :which-key "Find & Kill"))
-
-
-(general-def 'normal emacs-lisp-mode-map 
-  "K" 'elisp-slime-nav-describe-elisp-thing-at-point)
-
-;; Appending projectile keymaps
-(spaceleader-keys
-  :prefix "SPC p"
-  "r" '(run-current-project :which-key "Run Project")
-  "e" '(treemacs-projectile :which-key "Treemacs Projectile")
-  "o" '(counsel-projectile-switch-project :which-key "Open Project")
-  "d" '(projectile-remove-known-project :which-key "Add Project")
-  "a" '(projectile-add-known-project :which-key "Add Project"))
 
 (use-package async)
 
@@ -471,6 +496,14 @@
   (setq projectile-completion-system 'ivy)
   (projectile-mode +1))
 
+(spaceleader-keys
+  :prefix "SPC p"
+  "r" '(run-current-project :which-key "Run Project")
+  "e" '(treemacs-projectile :which-key "Treemacs Projectile")
+  "o" '(counsel-projectile-switch-project :which-key "Open Project")
+  "d" '(projectile-remove-known-project :which-key "Add Project")
+  "a" '(projectile-add-known-project :which-key "Add Project"))
+
 (use-package magit
   :custom
   (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
@@ -482,27 +515,30 @@
   :ensure t)
 
 (use-package ligature
-  :straight (:host github :repo "mickeynp/ligature.el")
+  :demand t
+  :config
+  (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
+  (ligature-set-ligatures t
+   '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
+     ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
+     "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
+     "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
+     "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
+     "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
+     "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
+     "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
+     ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
+     "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
+     "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
+     "?=" "?." "??"  ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
+     "\\\\" "://"))
   :init
   (global-ligature-mode t))
-(with-eval-after-load 'ligarure-mode
-                      (ligature-set-ligatures t '("www" "..."))
-                      (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
-                      (ligature-set-ligatures
-                       'prog-mode
-                       '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
-                         ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
-                         "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
-                         "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
-                         "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
-                         "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
-                         "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
-                         "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
-                         ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
-                         "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
-                         "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
-                         "?=" "?." "??"  ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
-                         "\\\\" "://")))
+
+(use-package unicode-fonts
+   :ensure t
+   :config
+    (unicode-fonts-setup))
 
 (use-package emojify
     :hook (after-init . global-emojify-mode))
@@ -520,6 +556,11 @@
   :demand t
   :config
   (smartparens-global-mode))
+
+(use-package beacon
+  :ensure t
+  :init
+  (beacon-mode 1))
 
 (use-package tree-sitter)
 (use-package tree-sitter-langs)
@@ -635,12 +676,14 @@
 
 (use-package doom-themes
   :demand
-  :init (load-theme 'doom-monokai-spectrum t))
+  :init (load-theme 'doom-molokai t))
 
 (use-package doom-modeline
   :demand t
   :init
   (setq doom-modeline-height 27
+        display-time-format " %H:%M:%S "
+        display-time-interval 1
         doom-modeline-buffer-encoding nil)
   (doom-modeline-mode 1))
 (doom-modeline-def-modeline 'main
@@ -659,12 +702,7 @@
     indent-info buffer-encoding
     major-mode process vcs " "))
 
-(defun doom-modeline-conditional-buffer-encoding ()
-  (setq-local doom-modeline-buffer-encoding
-              (unless (and (memq (plist-get (coding-system-plist buffer-file-coding-system) :category)
-                                 '(coding-category-undecided coding-category-utf-8))
-                           (not (memq (coding-system-eol-type buffer-file-coding-system) '(1 2))))
-                t)))
+(add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
 
     (use-package rainbow-delimiters
       :hook (prog-mode . rainbow-delimiters-mode))
@@ -678,6 +716,28 @@
     ([remap describe-command] . helpful-command)
     ([remap describe-variable] . counsel-describe-variable)
     ([remap describe-key] . helpful-key))
+
+;; (use-package centaur-tabs
+;;   :demand t
+;;   :config
+;;   (setq centaur-tabs-style "rounded"
+;;         centaur-tabs-height 26
+;;         centaur-tabs-set-icons t
+;;         centaur-tabs-set-modified-marker t
+;;         centaur-tabs-show-navigation-buttons t
+;;         centaur-tabs-set-bar 'under
+;;         x-underline-at-descent-line t)
+;;   (centaur-tabs-headline-match)
+;;   ;; (setq centaur-tabs-gray-out-icons 'buffer)
+;;   ;; (centaur-tabs-enable-buffer-reordering)
+;;   ;; (setq centaur-tabs-adjust-buffer-order t)
+;;   (setq centaur-tabs-set-bar 'under)
+;;   ;; Note: If you're not using Spacmeacs, in order for the underline to display
+;;   ;; correctly you must add the following line:
+;;   (setq x-underline-at-descent-line t)
+;;   :bind
+;;   ("C-<tab>" . centaur-tabs-forward)
+;;   ("C-<iso-lefttab>" . centaur-tabs-backward))
 
 (use-package dashboard
   :demand t
@@ -730,7 +790,22 @@
 
 (use-package lsp-ivy)
 
-(use-package dap-mode)
+(use-package dap-mode
+  ;; Uncomment the config below if you want all UI panes to be hidden by default!
+  ;; :custom
+  ;; (lsp-enable-dap-auto-configure nil)
+  ;; :config
+  ;; (dap-ui-mode 1)
+  :config
+  ;; Set up Node debugging
+  (require 'dap-node)
+  (dap-node-setup) ;; Automatically installs Node debug adapter if needed
+
+  ;; Bind `C-c l d` to `dap-hydra` for easy access
+  (general-define-key
+    :keymaps 'lsp-mode-map
+    :prefix lsp-keymap-prefix
+    "d" '(dap-hydra t :wk "debugger")))
 
 (use-package lsp-treemacs
     :after lsp)
@@ -763,13 +838,14 @@
 
 (use-package ripgrep)
 
-(use-package yasnippet)
-(yas-global-mode 1)
+(use-package yasnippet
+  :config
+  (yas-global-mode 1))
 
 (use-package rust-mode
   :ensure t
-  :hook ((rust-mode . flycheck-mode)
-	 (rust-mode . lsp-deferred))
+  :hook 
+  (rust-mode . lsp-deferred)
   :config
   (setq rust-format-on-save t))
 
@@ -783,6 +859,8 @@
 (with-eval-after-load 'lsp-mode
   (require 'dap-cpptools))
 
+;; (use-package cmake-mode)
+
 (use-package glsl-mode)
 
 (use-package json-mode
@@ -795,13 +873,19 @@
 
 (use-package python-mode
   :ensure t
-  :gfhook #'lsp)
+  :hook (python-mode . lsp-deferred)
+  :custom
+  (python-shell-interpreter "ipython")
+  (dap-python-debugger 'debugpy)
+  :config
+  (setq lsp-pylsp-plugins-pycodestyle-enabled nil
+        lsp-pylsp-plugins-pylint-enabled t)
 
-;; adds syntax highlighting for reST (and epydoc) docstrings and makes filling
-;; work as expected.(for all multi-line strings)
-(use-package python-docstring
-  :ghook 'python-mode-hook
-  :blackout t)
+  (require 'dap-python))
+
+;; (use-package python-docstring
+;;   :ghook 'python-mode-hook
+;;   :blackout t)
 
 (use-package julia-mode)
 
@@ -817,6 +901,9 @@
   :commands (jupyter-run-repl jupyter-connect-repl)
   :config
   (setq jupyter-server-buffer-name "*jupyter-server*"))
+
+(general-def 'normal emacs-lisp-mode-map 
+  "K" 'elisp-slime-nav-describe-elisp-thing-at-point)
 
 (use-package highlight-defined)
 (use-package lispy)
@@ -866,6 +953,97 @@
     (TeX-command-run-all nil)))
 
 (add-hook 'LaTeX-mode-hook (lambda () (add-hook 'after-save-hook #'latex-comp)))
+
+(setq org-latex-pdf-process
+      '("latexmk -pdflatex='pdflatex -interaction nonstopmode' -pdf -bibtex -f %f"))
+
+
+
+(unless (boundp 'org-latex-classes)
+  (setq org-latex-classes nil))
+
+(add-to-list 'org-latex-classes
+             '("ethz"
+               "\\documentclass[a4paper,11pt,titlepage]{memoir}
+    \\usepackage[utf8]{inputenc}
+    \\usepackage[T1]{fontenc}
+    \\usepackage{fixltx2e}
+    \\usepackage{graphicx}
+    \\usepackage{longtable}
+    \\usepackage{float}
+    \\usepackage{wrapfig}
+    \\usepackage{rotating}
+    \\usepackage[normalem]{ulem}
+    \\usepackage{amsmath}
+    \\usepackage{textcomp}
+    \\usepackage{marvosym}
+    \\usepackage{wasysym}
+    \\usepackage{amssymb}
+    \\usepackage{hyperref}
+    \\usepackage{mathpazo}
+    \\usepackage{color}
+    \\usepackage{enumerate}
+    \\definecolor{bg}{rgb}{0.95,0.95,0.95}
+    \\tolerance=1000
+          [NO-DEFAULT-PACKAGES]
+          [PACKAGES]
+          [EXTRA]
+    \\linespread{1.1}
+    \\hypersetup{pdfborder=0 0 0}"
+               ("\\chapter{%s}" . "\\chapter*{%s}")
+               ("\\section{%s}" . "\\section*{%s}")
+               ("\\subsection{%s}" . "\\subsection*{%s}")
+               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+               ("\\paragraph{%s}" . "\\paragraph*{%s}")
+               ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+
+
+(add-to-list 'org-latex-classes
+             '("article"
+               "\\documentclass[11pt,a4paper]{article}
+    \\usepackage[utf8]{inputenc}
+    \\usepackage[T1]{fontenc}
+    \\usepackage{fixltx2e}
+    \\usepackage{graphicx}
+    \\usepackage{longtable}
+    \\usepackage{float}
+    \\usepackage{wrapfig}
+    \\usepackage{rotating}
+    \\usepackage[normalem]{ulem}
+    \\usepackage{amsmath}
+    \\usepackage{textcomp}
+    \\usepackage{marvosym}
+    \\usepackage{wasysym}
+    \\usepackage{amssymb}
+    \\usepackage{hyperref}
+    \\usepackage{mathpazo}
+    \\usepackage{color}
+    \\usepackage{enumerate}
+    \\definecolor{bg}{rgb}{0.95,0.95,0.95}
+    \\tolerance=1000
+          [NO-DEFAULT-PACKAGES]
+          [PACKAGES]
+          [EXTRA]
+    \\linespread{1.1}
+    \\hypersetup{pdfborder=0 0 0}"
+               ("\\section{%s}" . "\\section*{%s}")
+               ("\\subsection{%s}" . "\\subsection*{%s}")
+               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+               ("\\paragraph{%s}" . "\\paragraph*{%s}")))
+
+
+(add-to-list 'org-latex-classes '("ebook"
+                                  "\\documentclass[11pt, oneside]{memoir}
+    \\setstocksize{9in}{6in}
+    \\settrimmedsize{\\stockheight}{\\stockwidth}{*}
+    \\setlrmarginsandblock{2cm}{2cm}{*} % Left and right margin
+    \\setulmarginsandblock{2cm}{2cm}{*} % Upper and lower margin
+    \\checkandfixthelayout
+    % Much more laTeX code omitted
+    "
+                                  ("\\chapter{%s}" . "\\chapter*{%s}")
+                                  ("\\section{%s}" . "\\section*{%s}")
+                                  ("\\subsection{%s}" . "\\subsection*{%s}")))
 
 (use-package vterm
   :commands vterm
@@ -1034,7 +1212,12 @@
 
 (add-hook 'pdf-view-mode-hook
           (lambda ()
-            (setq mode-line-format t)))
+            (progn
+              (blink-cursor-mode 0))))
+
+(add-hook 'pdf-outline-buffer-mode-hook '(lambda ()
+					  (progn
+                                            (set-window-width -75))))
 
 (use-package perspective
   :bind
@@ -1069,7 +1252,7 @@
   :config
   (setq org-ellipsis " ↴"
         org-hide-emphasis-markers t
-        org-agenda-files '("~/Projects/docs/Tasks.org")
+        org-agenda-files '("~/Books/Personal/Tasks.org")
         org-agenda-start-with-log-mode t
         org-log-done 'time
         org-log-into-drawer t)
@@ -1079,7 +1262,27 @@
     :after org
     :hook (org-mode . org-bullets-mode)
     :custom
-    (org-bullets-bullet-list '("💭" "🧿" "✿" "◉" "●" "◉")))
+    (org-bullets-bullet-list '("●" "🧿" "✿" "◉" "●" "◉")))
+
+(defun org-wrap-verbatim ()
+  (interactive)
+  (wrap-- "="))
+
+(defun org-wrap-code ()
+  (interactive)
+  (wrap-- "~"))
+
+(defun org-wrap-strike ()
+  (interactive)
+  (wrap-- "+"))
+
+(defun org-wrap-bold ()
+  (interactive)
+  (wrap-- "*"))
+
+(defun org-wrap-italics ()
+  (interactive)
+  (wrap-- "/"))
 
 (defun org-run-code-block ()
   (interactive)
@@ -1088,10 +1291,14 @@
 
 (general-m
   :keymaps 'org-mode-map
+  :states '(visual normal)
   "r" '(org-run-code-block :which-key "Run Code block")
-  "v" '(org-display-inline-images :which-key "Display inline Images")
-  "i=" '(org-wrap= :which-key "Wrap =")
-  "il" '(org-insert-link :which-key "Insert Link"))
+  "c" '(org-wrap-code :which-key "Wrap Code")
+  "b" '(org-wrap-bold :which-key "Wrap Bold")
+  "i" '(org-wrap-italics :which-key "Wrap italics")
+  "x" '(org-wrap-strike :which-key "Stike Seletion")
+  "v" '(org-wrap-verbatim :which-key "Wrap Verbatim")
+  "l" '(org-insert-link :which-key "Insert Link"))
 
 (org-babel-do-load-languages
  'org-babel-load-languages
@@ -1107,12 +1314,29 @@
 (eval-after-load 'org
   (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images))
 
-(setq org-babel-default-header-args:jupyter-python '((:async . "yes")
-                                                     (:session . "python")
-                                                     (:results . "both")
-                                                     (:pandoc . "t")
-                                                     (:exports . "both")
-                                                     (:kernel . "python3")))
+(setq org-babel-default-header-args:jupyter-python
+      '((:results . "raw")
+        (:session . "jupyter-python")
+        (:kernel . "python3")
+        (:async . "yes")
+        (:pandoc . "t")
+        (:exports . "both")
+        (:cache .   "no")
+        (:noweb . "no")
+        (:hlines . "no")
+        (:tangle . "no")
+        (:eval . "never-export")))
+
+(setq org-babel-default-header-args:jupyter-julia
+      '((:async . "yes")
+        (:session . "jupyter-julia")
+        (:kernel . "julia")
+        (:exports . "both")
+        (:eval . "never-export")))
+
+;; (add-to-list 'org-src-lang-modes '("jupyter-python" . python))
+(add-to-list 'org-src-lang-modes '("jupyter-julia" . julia))
+(add-to-list 'org-src-lang-modes '("jupyter-R" . R))
 
 (setq org-babel-default-header-args:ein-python '((:session . "localhost:8888/emacsnotebook.ipynb")))
 
@@ -1124,6 +1348,7 @@
 (add-to-list 'org-structure-template-alist '("jpn" . "src jupyter-python :results none"))
 (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
 (add-to-list 'org-structure-template-alist '("jl" . "src julia"))
+
 
 (setq org-confirm-babel-evaluate nil)
 

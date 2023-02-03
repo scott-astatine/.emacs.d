@@ -22,7 +22,8 @@
 (column-number-mode)
 (global-display-line-numbers-mode t)
 (menu-bar--display-line-numbers-mode-relative)
-;; (hs-minor-mode t)
+;; Set up the visible bell
+(setq visible-bell t)
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
@@ -34,8 +35,6 @@
                      (emacs-init-time "%.2f")
                      gcs-done)))
 
-
-
 #+end_src
 
 ** General Settings
@@ -45,22 +44,7 @@
       pixel-scroll-precision-large-scroll-height 40.0
       url-history-file (expand-file-name "url/history" user-emacs-directory))
 
-
-(dolist (mode '(term-mode-hook
-                helpful-mode-hook
-                vterm-mode-hook
-                ielm-mode-hook
-                ibuffer-mode-hook
-                doc-view-mode-hook
-                pdf-outline-buffer-hook
-                pdf-view-mode-hook
-                shell-mode-hook
-                treemacs-mode-hook
-                eshell-mode-hook))
-  (add-hook mode (lambda ()
-                   (progn
-                     (display-line-numbers-mode 0)
-                     (undo-tree-mode 0)))))
+(load-file "~/.emacs.d/hide-mode-line.el")
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
@@ -68,6 +52,37 @@
 (set-face-background 'hl-line "#4f4f5f55")
 
 ;;(hs-minor-mode)
+
+#+end_src
+
+** Auto Hooks
+#+begin_src emacs-lisp :tangle ~/.emacs.d/early-init.el
+
+(dolist (mode '(term-mode-hook
+                helpful-mode-hook
+                vterm-mode-hook
+                dashboard-mode-hook
+                messages-buffer-mode-hook
+                ielm-mode-hook
+                image-mode-hook
+                ibuffer-mode-hook
+                pdf-outline-buffer-mode-hook
+                shell-mode-hook
+                treemacs-mode-hook
+                eshell-mode-hook))
+  (add-hook mode (lambda ()
+                   (progn
+                     (display-line-numbers-mode 0)
+                     (hide-mode-line-mode 1)
+                     (undo-tree-mode 0)))))
+
+;;; Pdf Mode hooks
+(dolist (mode '(doc-view-mode-hook
+                pdf-view-mode-hook))
+  (add-hook mode (lambda ()
+                   (progn
+                     (display-line-numbers-mode 0)
+                     (undo-tree-mode 0)))))
 
 #+end_src
 
@@ -87,7 +102,8 @@ Directory for storing native comp cache
 (set-face-attribute 'default nil :font spacedefault-code-font :height spacedefault-font-size)
 (set-face-attribute 'fixed-pitch nil :font spacedefault-code-font :height spacedefault-font-size :weight 'regular)
 
-(set-face-attribute 'variable-pitch nil :font "Leckerli One" :height 155 :weight 'regular)
+;;; Previous Font "Leckerli One" Princess Sofia
+(set-face-attribute 'variable-pitch nil :font "Pacifico" :height 165 :weight 'regular)
 
 (variable-pitch-mode t)
 
@@ -104,8 +120,6 @@ Font config for different headers in orgmode & more appearence things
   (font-lock-add-keywords 'org-mode
                           '(("^ *\\([-]\\) "
                              (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
-
-  ;; Set faces for heading levels
   (dolist (face '((org-level-1 . 1.3)
                   (org-level-2 . 1.14)
                   (org-level-3 . 1.07)
@@ -121,7 +135,7 @@ Font config for different headers in orgmode & more appearence things
   (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
   ;; (set-face-attribute 'org-verbatim nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  ;; (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   ;; (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
 
@@ -131,6 +145,9 @@ Font config for different headers in orgmode & more appearence things
 ** Toogle Transparency
 #+begin_src emacs-lisp
 (set-frame-parameter nil 'alpha '(100 . 100))
+;; (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+;; (add-to-list 'default-frame-alist '(fullscreen . maximized))
+
 (defun toggle-transparency ()
   (interactive)
   (let ((alpha (frame-parameter nil 'alpha)))
@@ -141,45 +158,46 @@ Font config for different headers in orgmode & more appearence things
                     ;; Also handle undocumented (<active> <inactive>) form.
                     ((numberp (cadr alpha)) (cadr alpha)))
               100)
-         '(80 . 50) '(100 . 100)))))
+         '(85 . 50) '(100 . 100)))))
 (toggle-transparency)
 #+end_src
 
 ** Window Related Funcs
 #+begin_src emacs-lisp
 
-(defun set-window-height (height)
-  "Set the height of the current window to the specified HEIGHT."
-  (interactive "nWindow height: ")
-  (if (> height (window-total-height))
-      (enlarge-window (- height (window-total-height)))
-    (shrink-window (- (window-total-height) height))))
 
-(defun split-window-below-with-height (height)
-  "Split the current window horizontally and switch to the new window.
-   The new window will be given the specified HEIGHT."
-  (interactive "nWindow height: ")
-  (split-window-below)
-  (windmove-down)
-  (set-window-height height))
+  (defun set-window-height (height)
+    "Set the height of the current window to the specified HEIGHT."
+    (interactive "nWindow height: ")
+    (if (> height (window-total-height))
+	(enlarge-window (- height (window-total-height)))
+      (shrink-window (- (window-total-height) height))))
 
-(defun set-window-width (width)
-  "Set the width of the current window to WIDTH."
-  (interactive "nNew window width: ")
-  (let ((window (get-buffer-window (current-buffer))))
-    (when window
-          (enlarge-window-horizontally width))))
+  (defun split-window-below-with-height (height)
+    "Split the current window horizontally and switch to the new window.
+     The new window will be given the specified HEIGHT."
+    (interactive "nWindow height: ")
+    (split-window-below)
+    (windmove-down)
+    (set-window-height height))
 
-(defun split-repl ()
-  (interactive)
-  (split-window-below-with-height 15)
-  (ielm)
-  (setq splitwin (selected-window))
-  (add-hook 'kill-buffer-hook
-            (lambda ()
-              (when (eq splitwin (selected-window))
-                (delete-window (selected-window)))))
-  )
+  (defun set-window-width (width)
+    "Set the width of the current window to WIDTH."
+    (interactive "nNew window width: ")
+    (let ((window (get-buffer-window (current-buffer))))
+      (when window
+	    (enlarge-window-horizontally width))))
+
+  (defun split-repl ()
+    (interactive)
+    (split-window-below-with-height 15)
+    (ielm)
+    (setq splitwin (selected-window))
+    (add-hook 'kill-buffer-hook
+	      (lambda ()
+		(when (eq splitwin (selected-window))
+		  (delete-window (selected-window)))))
+    )
 
 #+end_src
 
@@ -201,7 +219,8 @@ Font config for different headers in orgmode & more appearence things
 
 (defun split-h-vterm-window ()
   (interactive)
-  (split-vterm 10))
+  (split-vterm 10)
+  (hide-mode-line-mode))
 
 #+end_src
 
@@ -259,7 +278,7 @@ Font config for different headers in orgmode & more appearence things
        "C-d" '(lambda () (interactive) (kill-this-buffer))
        "q" '(lambda () (interactive) (kill-this-buffer)))
       ;; (vterm-send-string (concat "cd " project-root " && " run-command "\n"))
-      (set-frame-name "project-runner")
+      ;; (set-frame-name "project-runner")
       (setq splitwin (selected-window))
       (rename-buffer "Runner")
       (add-hook 'kill-buffer-hook
@@ -286,15 +305,49 @@ Font config for different headers in orgmode & more appearence things
   (interactive)
   (insert (format-time-string "%H:%M")))
 
-(defun org-wrap= ()
+(defun wrap-- (m1)
   (interactive)
   (if (use-region-p)
       (progn
         (kill-region (region-beginning) (region-end))
-        (insert "=")
+        (insert m1)
         (yank)
-        (insert "="))
+        (insert m1))
     (message "No region selected")))
+
+(defun wrap-quotes ()
+  (interactive)
+  (wrap-- "\""))
+
+(defun wrap-sb ()
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (kill-region (region-beginning) (region-end))
+        (insert "[")
+        (yank)
+        (insert "]"))
+    (message "No region selected")))
+(defun wrap-cb ()
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (kill-region (region-beginning) (region-end))
+        (insert "{")
+        (yank)
+        (insert "}"))
+    (message "No region selected")))
+
+(defun wrap-rb ()
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (kill-region (region-beginning) (region-end))
+        (insert "(")
+        (yank)
+        (insert ")"))
+    (message "No region selected")))
+
 
 #+end_src
 
@@ -480,11 +533,13 @@ Install =use-package.el= with optional dependencies and configure:
   :init
   (general-evil-setup)
   :demand t)
-(general-def 'normal 'override
+
+(general-def '(normal visual) 'override
   "L" 'next-buffer
   "H" 'previous-buffer
   "E" 'evil-end-of-visual-line
   ";" 'counsel-M-x)
+
 (general-def 'normal
   "j" 'evil-next-visual-line
   "k" 'evil-previous-visual-line)
@@ -508,7 +563,7 @@ Install =use-package.el= with optional dependencies and configure:
 
 
 (general-create-definer spaceleader-keys
-  :keymaps '(override treemacs-mode)
+  :keymaps 'override
   :states '(normal visual)
   :prefix "SPC")
 
@@ -522,9 +577,11 @@ Install =use-package.el= with optional dependencies and configure:
 **** Sanity
 #+begin_src emacs-lisp
 (general-def 'normal 'override
- ;; "u" 'undo-tree-undo
  "K" 'lsp-describe-thing-at-point
- "g/" 'evilnc-comment-or-uncomment-lines
+ "g/" 'evilnc-comment-or-uncomment-lines)
+
+(general-def '(normal insert) 'override
+  "C-<tab>" '(counsel-switch-buffer :which-key "Switch Buffer")
  "C-k" 'evil-scroll-line-up
  "C-j" 'evil-scroll-line-down)
 
@@ -538,18 +595,22 @@ Install =use-package.el= with optional dependencies and configure:
 (defun mjort ()
   (interactive)
   (funcall major-mode))
+
 (general-m
+  :keymaps 'override
   "t" '(mjort :which-key "Toogle Major Mode"))
+
 (spaceleader-keys
   "SPC" '(projectile-find-file :which-key "Find file in project")
 
   "w" '(evil-window-map :which-key "Window")
+  "l" '(lsp-mode-map :which-key "Window")
   "ww" '(set-window-width :which-key "Set Width")
   "wi" '(set-window-height :which-key "Set Height")
   "a" '(ace-select-window :which-key "Select Window")
   "qq"'(save-buffers-kill-terminal :which-key "Exit Emacs")
   "d"'(kill-this-buffer :which-key "Exit Emacs")
-  "s"'(swiper :which-key "Exit Emacs")
+  "ss"'(swiper :which-key "Search...")
 
   "e" '(treemacs-select-window :which-key "Treemacs Toggle"))
 
@@ -566,7 +627,7 @@ Install =use-package.el= with optional dependencies and configure:
   "b" '(display-battery-mode :which-key "Toogle Battery")
   "v" '(visual-fill-column-mode :which-key "Center Column")
   "d" '(elcord-mode :which-key "Discord status")
-  "m" '(mjort :which-key "Toogle Major Mode"))
+  "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 #+end_src
 
@@ -577,7 +638,7 @@ Install =use-package.el= with optional dependencies and configure:
   "s" '(save-buffer :which-key "Save Buffer")
   "o" '(counsel-find-file :which-key "Open File")
   "f" '(projectile-find-file :which-key "Find file in project")
-  "r" '(counsel-recentf :which-key "Open File"))
+  "r" '(counsel-recentf :which-key "Open Recent File"))
 
 #+end_src
 
@@ -598,6 +659,10 @@ Install =use-package.el= with optional dependencies and configure:
 (spaceleader-keys
   :prefix "SPC i"
   "d" '(insert-current-date :which-key "Insert Date")
+  "q" '(wrap-quotes :which-key "Wrap quites")
+  "[" '(wrap-sb :which-key "Wrap []")
+  "9" '(wrap-rb :which-key "Wrap ()")
+  "]" '(wrap-cb :which-key "Wrap {}")
   "SPC" '(inspc :which-key "Insert Date")
   "t" '(insert-current-time :which-key "Insert Time")
   "e" '(emoji-insert :which-key "Insert Emoji"))
@@ -615,12 +680,17 @@ Install =use-package.el= with optional dependencies and configure:
 
 **** SPC o, aka for opening stuff
 #+begin_src emacs-lisp
+(defun mtt ()
+  (interactive)
+  (multi-vterm)
+  (hide-mode-line-mode))
 (spaceleader-keys
   :prefix "SPC o"
-  "T" '(multi-vterm :which-key "Open Term")
+  "T" '(mtt :which-key "Open Term")
   "t" '(split-h-vterm-window :which-key "Open Term")
   "i" '(counsel-imenu :which-key "IMenu")
   "j" '((lambda () (interactive) (find-file "/home/scott/Books/Personal/Journal.org")) :which-key "Open Journal")
+  "c" '((lambda () (interactive) (find-file "~/.emacs.d/Config.org")) :which-key "Open Config")
   "r" '(split-repl :which-key "Elisp REPL")
   "b" '(eww :which-key "eww")
   "e" '(eshell :which-key "Eshell"))
@@ -637,27 +707,10 @@ Install =use-package.el= with optional dependencies and configure:
   "d" '(kill-buffer :which-key "Find & Kill"))
 
 
-(general-def 'normal emacs-lisp-mode-map 
-  "K" 'elisp-slime-nav-describe-elisp-thing-at-point)
-
-#+end_src
-
-*** Projectile Keymaps
-#+begin_src emacs-lisp
-
-;; Appending projectile keymaps
-(spaceleader-keys
-  :prefix "SPC p"
-  "r" '(run-current-project :which-key "Run Project")
-  "e" '(treemacs-projectile :which-key "Treemacs Projectile")
-  "o" '(counsel-projectile-switch-project :which-key "Open Project")
-  "d" '(projectile-remove-known-project :which-key "Add Project")
-  "a" '(projectile-add-known-project :which-key "Add Project"))
-
 #+end_src
 
 * Packages
-** Async Init Tangling
+** Async
 #+begin_src emacs-lisp
 (use-package async)
 #+end_src
@@ -669,6 +722,7 @@ Install =use-package.el= with optional dependencies and configure:
 #+end_src
 
 ** Projectile
+*** Setup
 #+begin_src emacs-lisp
 (use-package projectile
   :init
@@ -680,6 +734,18 @@ Install =use-package.el= with optional dependencies and configure:
   (setq projectile-completion-system 'ivy)
   (projectile-mode +1))
 
+
+#+end_src
+
+*** Keymaps
+#+begin_src emacs-lisp
+(spaceleader-keys
+  :prefix "SPC p"
+  "r" '(run-current-project :which-key "Run Project")
+  "e" '(treemacs-projectile :which-key "Treemacs Projectile")
+  "o" '(counsel-projectile-switch-project :which-key "Open Project")
+  "d" '(projectile-remove-known-project :which-key "Add Project")
+  "a" '(projectile-add-known-project :which-key "Add Project"))
 
 #+end_src
 
@@ -705,31 +771,36 @@ Install =use-package.el= with optional dependencies and configure:
 ** Ligatures
 #+begin_src emacs-lisp
 (use-package ligature
-  :straight (:host github :repo "mickeynp/ligature.el")
+  :demand t
+  :config
+  (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
+  (ligature-set-ligatures t
+   '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
+     ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
+     "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
+     "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
+     "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
+     "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
+     "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
+     "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
+     ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
+     "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
+     "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
+     "?=" "?." "??"  ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
+     "\\\\" "://"))
   :init
   (global-ligature-mode t))
-(with-eval-after-load 'ligarure-mode
-                      (ligature-set-ligatures t '("www" "..."))
-                      (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
-                      (ligature-set-ligatures
-                       'prog-mode
-                       '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
-                         ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
-                         "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
-                         "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
-                         "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
-                         "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
-                         "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
-                         "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
-                         ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
-                         "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
-                         "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
-                         "?=" "?." "??"  ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
-                         "\\\\" "://")))
 
 
 #+end_src
 
+** Unicode
+#+begin_src emacs-lisp
+(use-package unicode-fonts
+   :ensure t
+   :config
+    (unicode-fonts-setup))
+#+end_src
 ** Emojify
 #+begin_src emacs-lisp
 
@@ -761,6 +832,14 @@ Install =use-package.el= with optional dependencies and configure:
   :demand t
   :config
   (smartparens-global-mode))
+#+end_src
+
+** Beacon
+#+begin_src emacs-lisp
+(use-package beacon
+  :ensure t
+  :init
+  (beacon-mode 1))
 #+end_src
 
 * UI Config
@@ -913,7 +992,7 @@ Install =use-package.el= with optional dependencies and configure:
 
 (use-package doom-themes
   :demand
-  :init (load-theme 'doom-monokai-spectrum t))
+  :init (load-theme 'doom-molokai t))
 #+end_src
 
 ** Doom Modeline
@@ -922,6 +1001,8 @@ Install =use-package.el= with optional dependencies and configure:
   :demand t
   :init
   (setq doom-modeline-height 27
+        display-time-format " %H:%M:%S "
+        display-time-interval 1
         doom-modeline-buffer-encoding nil)
   (doom-modeline-mode 1))
 (doom-modeline-def-modeline 'main
@@ -940,13 +1021,7 @@ Install =use-package.el= with optional dependencies and configure:
     indent-info buffer-encoding
     major-mode process vcs " "))
 
-(defun doom-modeline-conditional-buffer-encoding ()
-  (setq-local doom-modeline-buffer-encoding
-              (unless (and (memq (plist-get (coding-system-plist buffer-file-coding-system) :category)
-                                 '(coding-category-undecided coding-category-utf-8))
-                           (not (memq (coding-system-eol-type buffer-file-coding-system) '(1 2))))
-                t)))
-
+(add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
 #+end_src
 
 ** Rainbow
@@ -967,6 +1042,33 @@ Install =use-package.el= with optional dependencies and configure:
     ([remap describe-variable] . counsel-describe-variable)
     ([remap describe-key] . helpful-key))
 
+
+#+end_src
+
+** Centaur Tabs
+
+#+begin_src emacs-lisp
+;; (use-package centaur-tabs
+;;   :demand t
+;;   :config
+;;   (setq centaur-tabs-style "rounded"
+;;         centaur-tabs-height 26
+;;         centaur-tabs-set-icons t
+;;         centaur-tabs-set-modified-marker t
+;;         centaur-tabs-show-navigation-buttons t
+;;         centaur-tabs-set-bar 'under
+;;         x-underline-at-descent-line t)
+;;   (centaur-tabs-headline-match)
+;;   ;; (setq centaur-tabs-gray-out-icons 'buffer)
+;;   ;; (centaur-tabs-enable-buffer-reordering)
+;;   ;; (setq centaur-tabs-adjust-buffer-order t)
+;;   (setq centaur-tabs-set-bar 'under)
+;;   ;; Note: If you're not using Spacmeacs, in order for the underline to display
+;;   ;; correctly you must add the following line:
+;;   (setq x-underline-at-descent-line t)
+;;   :bind
+;;   ("C-<tab>" . centaur-tabs-forward)
+;;   ("C-<iso-lefttab>" . centaur-tabs-backward))
 
 #+end_src
 
@@ -1034,7 +1136,22 @@ Install =use-package.el= with optional dependencies and configure:
 
 ** DAP mode
 #+begin_src emacs-lisp
-(use-package dap-mode)
+(use-package dap-mode
+  ;; Uncomment the config below if you want all UI panes to be hidden by default!
+  ;; :custom
+  ;; (lsp-enable-dap-auto-configure nil)
+  ;; :config
+  ;; (dap-ui-mode 1)
+  :config
+  ;; Set up Node debugging
+  (require 'dap-node)
+  (dap-node-setup) ;; Automatically installs Node debug adapter if needed
+
+  ;; Bind `C-c l d` to `dap-hydra` for easy access
+  (general-define-key
+    :keymaps 'lsp-mode-map
+    :prefix lsp-keymap-prefix
+    "d" '(dap-hydra t :wk "debugger")))
 #+end_src
 
 ** Lsp-Treemacs
@@ -1087,16 +1204,17 @@ Install =use-package.el= with optional dependencies and configure:
 
 ** YaSnippet
 #+begin_src emacs-lisp
-(use-package yasnippet)
-(yas-global-mode 1)
+(use-package yasnippet
+  :config
+  (yas-global-mode 1))
 #+end_src
 
 ** Rust
 #+begin_src emacs-lisp
 (use-package rust-mode
   :ensure t
-  :hook ((rust-mode . flycheck-mode)
-	 (rust-mode . lsp-deferred))
+  :hook 
+  (rust-mode . lsp-deferred)
   :config
   (setq rust-format-on-save t))
 
@@ -1115,6 +1233,10 @@ Install =use-package.el= with optional dependencies and configure:
 (with-eval-after-load 'lsp-mode
   (require 'dap-cpptools))
   
+#+end_src
+#+begin_src emacs-lisp
+;; (use-package cmake-mode)
+
 #+end_src
 
 ** GLSL
@@ -1144,16 +1266,22 @@ Install =use-package.el= with optional dependencies and configure:
 #+begin_src emacs-lisp
 (use-package python-mode
   :ensure t
-  :gfhook #'lsp)
+  :hook (python-mode . lsp-deferred)
+  :custom
+  (python-shell-interpreter "ipython")
+  (dap-python-debugger 'debugpy)
+  :config
+  (setq lsp-pylsp-plugins-pycodestyle-enabled nil
+        lsp-pylsp-plugins-pylint-enabled t)
+
+  (require 'dap-python))
 
 #+end_src
 *** Docstrings
 #+begin_src emacs-lisp
-;; adds syntax highlighting for reST (and epydoc) docstrings and makes filling
-;; work as expected.(for all multi-line strings)
-(use-package python-docstring
-  :ghook 'python-mode-hook
-  :blackout t)
+;; (use-package python-docstring
+;;   :ghook 'python-mode-hook
+;;   :blackout t)
 
 #+end_src
 
@@ -1182,6 +1310,12 @@ Install =use-package.el= with optional dependencies and configure:
   :config
   (setq jupyter-server-buffer-name "*jupyter-server*"))
 
+#+end_src
+
+** Elisp
+#+begin_src emacs-lisp
+(general-def 'normal emacs-lisp-mode-map 
+  "K" 'elisp-slime-nav-describe-elisp-thing-at-point)
 #+end_src
 
 ** Elisp
@@ -1260,6 +1394,98 @@ Install =use-package.el= with optional dependencies and configure:
     (TeX-command-run-all nil)))
 
 (add-hook 'LaTeX-mode-hook (lambda () (add-hook 'after-save-hook #'latex-comp)))
+
+(setq org-latex-pdf-process
+      '("latexmk -pdflatex='pdflatex -interaction nonstopmode' -pdf -bibtex -f %f"))
+
+
+
+(unless (boundp 'org-latex-classes)
+  (setq org-latex-classes nil))
+
+(add-to-list 'org-latex-classes
+             '("ethz"
+               "\\documentclass[a4paper,11pt,titlepage]{memoir}
+    \\usepackage[utf8]{inputenc}
+    \\usepackage[T1]{fontenc}
+    \\usepackage{fixltx2e}
+    \\usepackage{graphicx}
+    \\usepackage{longtable}
+    \\usepackage{float}
+    \\usepackage{wrapfig}
+    \\usepackage{rotating}
+    \\usepackage[normalem]{ulem}
+    \\usepackage{amsmath}
+    \\usepackage{textcomp}
+    \\usepackage{marvosym}
+    \\usepackage{wasysym}
+    \\usepackage{amssymb}
+    \\usepackage{hyperref}
+    \\usepackage{mathpazo}
+    \\usepackage{color}
+    \\usepackage{enumerate}
+    \\definecolor{bg}{rgb}{0.95,0.95,0.95}
+    \\tolerance=1000
+          [NO-DEFAULT-PACKAGES]
+          [PACKAGES]
+          [EXTRA]
+    \\linespread{1.1}
+    \\hypersetup{pdfborder=0 0 0}"
+               ("\\chapter{%s}" . "\\chapter*{%s}")
+               ("\\section{%s}" . "\\section*{%s}")
+               ("\\subsection{%s}" . "\\subsection*{%s}")
+               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+               ("\\paragraph{%s}" . "\\paragraph*{%s}")
+               ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+
+
+(add-to-list 'org-latex-classes
+             '("article"
+               "\\documentclass[11pt,a4paper]{article}
+    \\usepackage[utf8]{inputenc}
+    \\usepackage[T1]{fontenc}
+    \\usepackage{fixltx2e}
+    \\usepackage{graphicx}
+    \\usepackage{longtable}
+    \\usepackage{float}
+    \\usepackage{wrapfig}
+    \\usepackage{rotating}
+    \\usepackage[normalem]{ulem}
+    \\usepackage{amsmath}
+    \\usepackage{textcomp}
+    \\usepackage{marvosym}
+    \\usepackage{wasysym}
+    \\usepackage{amssymb}
+    \\usepackage{hyperref}
+    \\usepackage{mathpazo}
+    \\usepackage{color}
+    \\usepackage{enumerate}
+    \\definecolor{bg}{rgb}{0.95,0.95,0.95}
+    \\tolerance=1000
+          [NO-DEFAULT-PACKAGES]
+          [PACKAGES]
+          [EXTRA]
+    \\linespread{1.1}
+    \\hypersetup{pdfborder=0 0 0}"
+               ("\\section{%s}" . "\\section*{%s}")
+               ("\\subsection{%s}" . "\\subsection*{%s}")
+               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+               ("\\paragraph{%s}" . "\\paragraph*{%s}")))
+
+
+(add-to-list 'org-latex-classes '("ebook"
+                                  "\\documentclass[11pt, oneside]{memoir}
+    \\setstocksize{9in}{6in}
+    \\settrimmedsize{\\stockheight}{\\stockwidth}{*}
+    \\setlrmarginsandblock{2cm}{2cm}{*} % Left and right margin
+    \\setulmarginsandblock{2cm}{2cm}{*} % Upper and lower margin
+    \\checkandfixthelayout
+    % Much more laTeX code omitted
+    "
+                                  ("\\chapter{%s}" . "\\chapter*{%s}")
+                                  ("\\section{%s}" . "\\section*{%s}")
+                                  ("\\subsection{%s}" . "\\subsection*{%s}")))
+
 #+end_src
 
 * Productivity
@@ -1389,6 +1615,7 @@ Install =use-package.el= with optional dependencies and configure:
 #+end_src
 
 ** eww
+*** Setup
 #+begin_src emacs-lisp
 (with-eval-after-load 'eww
   (setq-local endless/display-images t)
@@ -1440,7 +1667,10 @@ Install =use-package.el= with optional dependencies and configure:
   (setq-default shr-use-fonts nil))
 #+end_src
 
+*** Keymaps
+
 ** Pdf Mode
+*** Setup
 #+begin_src emacs-lisp
 (use-package pdf-tools
   :demand t
@@ -1451,10 +1681,12 @@ Install =use-package.el= with optional dependencies and configure:
 
 (add-hook 'pdf-view-mode-hook
           (lambda ()
-            (setq mode-line-format t)))
+            (progn
+              (blink-cursor-mode 0))))
 
-
-
+(add-hook 'pdf-outline-buffer-mode-hook '(lambda ()
+					  (progn
+                                            (set-window-width -75))))
 #+end_src
 
 ** Prespective
@@ -1501,7 +1733,7 @@ Install =use-package.el= with optional dependencies and configure:
   :config
   (setq org-ellipsis " ↴"
         org-hide-emphasis-markers t
-        org-agenda-files '("~/Projects/docs/Tasks.org")
+        org-agenda-files '("~/Books/Personal/Tasks.org")
         org-agenda-start-with-log-mode t
         org-log-done 'time
         org-log-into-drawer t)
@@ -1516,7 +1748,31 @@ Install =use-package.el= with optional dependencies and configure:
     :after org
     :hook (org-mode . org-bullets-mode)
     :custom
-    (org-bullets-bullet-list '("💭" "🧿" "✿" "◉" "●" "◉")))
+    (org-bullets-bullet-list '("●" "🧿" "✿" "◉" "●" "◉")))
+
+#+end_src
+
+** Wrapers
+#+begin_src emacs-lisp
+(defun org-wrap-verbatim ()
+  (interactive)
+  (wrap-- "="))
+
+(defun org-wrap-code ()
+  (interactive)
+  (wrap-- "~"))
+
+(defun org-wrap-strike ()
+  (interactive)
+  (wrap-- "+"))
+
+(defun org-wrap-bold ()
+  (interactive)
+  (wrap-- "*"))
+
+(defun org-wrap-italics ()
+  (interactive)
+  (wrap-- "/"))
 
 #+end_src
 
@@ -1529,10 +1785,14 @@ Install =use-package.el= with optional dependencies and configure:
 
 (general-m
   :keymaps 'org-mode-map
+  :states '(visual normal)
   "r" '(org-run-code-block :which-key "Run Code block")
-  "v" '(org-display-inline-images :which-key "Display inline Images")
-  "i=" '(org-wrap= :which-key "Wrap =")
-  "il" '(org-insert-link :which-key "Insert Link"))
+  "c" '(org-wrap-code :which-key "Wrap Code")
+  "b" '(org-wrap-bold :which-key "Wrap Bold")
+  "i" '(org-wrap-italics :which-key "Wrap italics")
+  "x" '(org-wrap-strike :which-key "Stike Seletion")
+  "v" '(org-wrap-verbatim :which-key "Wrap Verbatim")
+  "l" '(org-insert-link :which-key "Insert Link"))
 
 #+end_src
 
@@ -1552,12 +1812,29 @@ Install =use-package.el= with optional dependencies and configure:
 (eval-after-load 'org
   (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images))
 
-(setq org-babel-default-header-args:jupyter-python '((:async . "yes")
-                                                     (:session . "python")
-                                                     (:results . "both")
-                                                     (:pandoc . "t")
-                                                     (:exports . "both")
-                                                     (:kernel . "python3")))
+(setq org-babel-default-header-args:jupyter-python
+      '((:results . "raw")
+        (:session . "jupyter-python")
+        (:kernel . "python3")
+        (:async . "yes")
+        (:pandoc . "t")
+        (:exports . "both")
+        (:cache .   "no")
+        (:noweb . "no")
+        (:hlines . "no")
+        (:tangle . "no")
+        (:eval . "never-export")))
+
+(setq org-babel-default-header-args:jupyter-julia
+      '((:async . "yes")
+        (:session . "jupyter-julia")
+        (:kernel . "julia")
+        (:exports . "both")
+        (:eval . "never-export")))
+
+;; (add-to-list 'org-src-lang-modes '("jupyter-python" . python))
+(add-to-list 'org-src-lang-modes '("jupyter-julia" . julia))
+(add-to-list 'org-src-lang-modes '("jupyter-R" . R))
 
 (setq org-babel-default-header-args:ein-python '((:session . "localhost:8888/emacsnotebook.ipynb")))
 
@@ -1569,6 +1846,7 @@ Install =use-package.el= with optional dependencies and configure:
 (add-to-list 'org-structure-template-alist '("jpn" . "src jupyter-python :results none"))
 (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
 (add-to-list 'org-structure-template-alist '("jl" . "src julia"))
+
 
 (setq org-confirm-babel-evaluate nil)
 

@@ -15,7 +15,8 @@
 (column-number-mode)
 (global-display-line-numbers-mode t)
 (menu-bar--display-line-numbers-mode-relative)
-;; (hs-minor-mode t)
+;; Set up the visible bell
+(setq visible-bell t)
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
@@ -26,3 +27,29 @@
             (message "*** Emacs loaded in %s seconds with %d garbage collections."
                      (emacs-init-time "%.2f")
                      gcs-done)))
+
+(dolist (mode '(term-mode-hook
+                helpful-mode-hook
+                vterm-mode-hook
+                dashboard-mode-hook
+                messages-buffer-mode-hook
+                ielm-mode-hook
+                image-mode-hook
+                ibuffer-mode-hook
+                pdf-outline-buffer-mode-hook
+                shell-mode-hook
+                treemacs-mode-hook
+                eshell-mode-hook))
+  (add-hook mode (lambda ()
+                   (progn
+                     (display-line-numbers-mode 0)
+                     (hide-mode-line-mode 1)
+                     (undo-tree-mode 0)))))
+
+;;; Pdf Mode hooks
+(dolist (mode '(doc-view-mode-hook
+                pdf-view-mode-hook))
+  (add-hook mode (lambda ()
+                   (progn
+                     (display-line-numbers-mode 0)
+                     (undo-tree-mode 0)))))
