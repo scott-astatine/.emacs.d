@@ -362,10 +362,9 @@
   "-" 'evil-end-of-line
   "B" 'evil-beginning-of-visual-line
   "P" 'evil-jump-item
-  "W" 'toggle-transparency
- "g/" 'evilnc-comment-or-uncomment-lines
+  "C-o" 'toggle-transparency
+  "g/" 'evilnc-comment-or-uncomment-lines
   ";" 'counsel-M-x)
-
 
 (general-def '(normal insert) 'override
   "C-<tab>" '(counsel-switch-buffer :which-key "Switch Buffer")
@@ -1223,14 +1222,17 @@
 
 (defun poww ()
   (interactive)
-  (set-window-width -75))
+  (set-window-width -80))
 
 (general-def 'normal 'pdf-view-mode-map
   "J" 'pdf-view-next-page
+  "w" 'pdf-view-fit-width-to-window
   "K" 'pdf-view-previous-page
-  "I" 'pdf-view-midnight-minor-mode)
+  "i" 'pdf-view-midnight-minor-mode)
 
 (general-def 'normal 'pdf-outline-buffer-mode-map
+  "a" 'evil-window-left
+  "d" 'pdf-outline-display-link
   "o" 'poww)
 
 (use-package perspective

@@ -1,8 +1,16 @@
 * This is my literate emacs config
 Filled with my defaults & made for me!
+- =Features=
+  - It has support for most of the programming languages with ~lsp-mode~
+  - It's got sane default evil keymaps that I use most often
+  - Pdf Viewer support builtin with proper & sane keymaps
+  - Configurable project runner 
 
-=But if you wanna check it out or possibley use it and modify it for your own personal use then...=
+
+=If you wanna check it out or possibley use it and modify it for your own personal use then...=
 #+begin_src shell
-git clone https://github.com/scott-astatine/.emacs.d.git
+# backup ~/.emacs.d 
+# mv ~/.emacs.d ~/.emacs.d.bak
+git clone https://github.com/scott-astatine/.emacs.d.git ~/.emacs.d
 #+end_src
 
