@@ -1,2 +1,8 @@
 * This is my literate emacs config
 Filled with my defaults & made for me!
+
+=But if you wanna check it out or possibley use it and modify it for your own personal use then...=
+#+begin_src shell
+git clone https://github.com/scott-astatine/.emacs.d.git
+#+end_src
+

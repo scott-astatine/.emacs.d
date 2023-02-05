@@ -350,15 +350,31 @@
   (general-evil-setup)
   :demand t)
 
+(general-def 'normal
+  "j" 'evil-next-visual-line
+  "k" 'evil-previous-visual-line
+  "K" 'lsp-describe-thing-at-point)
+
 (general-def '(normal visual) 'override
   "L" 'next-buffer
   "H" 'previous-buffer
   "E" 'evil-end-of-visual-line
+  "-" 'evil-end-of-line
+  "B" 'evil-beginning-of-visual-line
+  "P" 'evil-jump-item
+  "W" 'toggle-transparency
+ "g/" 'evilnc-comment-or-uncomment-lines
   ";" 'counsel-M-x)
 
-(general-def 'normal
-  "j" 'evil-next-visual-line
-  "k" 'evil-previous-visual-line)
+
+(general-def '(normal insert) 'override
+  "C-<tab>" '(counsel-switch-buffer :which-key "Switch Buffer")
+ "C-k" 'evil-scroll-line-up
+ "C-j" 'evil-scroll-line-down)
+
+(general-def 'insert
+ "C-g" 'evil-normal-state
+ "C-h" 'evil-delete-backward-char-and-join)
 
 (general-def '(normal visual)
   "SPC" nil
@@ -382,26 +398,14 @@
   :states 'normal
   :prefix "m")
 
-(general-def 'normal 'override
- "K" 'lsp-describe-thing-at-point
- "g/" 'evilnc-comment-or-uncomment-lines)
-
-(general-def '(normal insert) 'override
-  "C-<tab>" '(counsel-switch-buffer :which-key "Switch Buffer")
- "C-k" 'evil-scroll-line-up
- "C-j" 'evil-scroll-line-down)
-
-(general-def 'insert
- "C-g" 'evil-normal-state
- "C-h" 'evil-delete-backward-char-and-join)
-
 (defun mjort ()
   (interactive)
   (funcall major-mode))
 
 (general-m
   :keymaps 'override
-  "t" '(mjort :which-key "Toogle Major Mode"))
+  "t" '(mjort :which-key "Toogle Major Mode")
+  "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 (spaceleader-keys
   "SPC" '(projectile-find-file :which-key "Find file in project")
@@ -468,7 +472,7 @@
   "T" '(mtt :which-key "Open Term")
   "t" '(split-h-vterm-window :which-key "Open Term")
   "i" '(counsel-imenu :which-key "IMenu")
-  "j" '((lambda () (interactive) (find-file "/home/scott/Books/Personal/Journal.org")) :which-key "Open Journal")
+  "j" '((lambda () (interactive) (find-file "~/Books/Personal/Journal.org")) :which-key "Open Journal")
   "c" '((lambda () (interactive) (find-file "~/.emacs.d/Config.org")) :which-key "Open Config")
   "r" '(split-repl :which-key "Elisp REPL")
   "b" '(eww :which-key "eww")
@@ -676,7 +680,7 @@
 
 (use-package doom-themes
   :demand
-  :init (load-theme 'doom-molokai t))
+  :init (load-theme 'doom-tokyo-night t))
 
 (use-package doom-modeline
   :demand t
@@ -837,10 +841,6 @@
 (add-hook 'after-init-hook #'global-flycheck-mode)
 
 (use-package ripgrep)
-
-(use-package yasnippet
-  :config
-  (yas-global-mode 1))
 
 (use-package rust-mode
   :ensure t
@@ -1045,6 +1045,14 @@
                                   ("\\section{%s}" . "\\section*{%s}")
                                   ("\\subsection{%s}" . "\\subsection*{%s}")))
 
+(use-package yasnippet
+  :config
+  (yas-global-mode 1))
+
+(use-package doom-snippets
+  :after yasnippet
+  :straight (doom-snippets :type git :host github :repo "hlissner/doom-snippets" :files ("*.el" "*")))
+
 (use-package vterm
   :commands vterm
   :config
@@ -1205,19 +1213,25 @@
 
 (use-package pdf-tools
   :demand t
-  :init
-  (setq pdf-tools-installer-os "pacman")
   :config
   (pdf-tools-install))
 
 (add-hook 'pdf-view-mode-hook
           (lambda ()
             (progn
-              (blink-cursor-mode 0))))
+              (hide-mode-line-mode 0))))
 
-(add-hook 'pdf-outline-buffer-mode-hook '(lambda ()
-					  (progn
-                                            (set-window-width -75))))
+(defun poww ()
+  (interactive)
+  (set-window-width -75))
+
+(general-def 'normal 'pdf-view-mode-map
+  "J" 'pdf-view-next-page
+  "K" 'pdf-view-previous-page
+  "I" 'pdf-view-midnight-minor-mode)
+
+(general-def 'normal 'pdf-outline-buffer-mode-map
+  "o" 'poww)
 
 (use-package perspective
   :bind
