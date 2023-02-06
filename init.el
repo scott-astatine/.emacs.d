@@ -68,38 +68,39 @@
          '(85 . 50) '(100 . 100)))))
 (toggle-transparency)
 
-  (defun set-window-height (height)
-    "Set the height of the current window to the specified HEIGHT."
-    (interactive "nWindow height: ")
-    (if (> height (window-total-height))
-	(enlarge-window (- height (window-total-height)))
-      (shrink-window (- (window-total-height) height))))
+(set-fringe-style 0)
+(setq window-divider-default-right-width 3)
+(defun set-window-height (height)
+  "Set the height of the current window to the specified HEIGHT."
+  (interactive "nWindow height: ")
+  (if (> height (window-total-height))
+      (enlarge-window (- height (window-total-height)))
+    (shrink-window (- (window-total-height) height))))
 
-  (defun split-window-below-with-height (height)
-    "Split the current window horizontally and switch to the new window.
+(defun split-window-below-with-height (height)
+  "Split the current window horizontally and switch to the new window.
      The new window will be given the specified HEIGHT."
-    (interactive "nWindow height: ")
-    (split-window-below)
-    (windmove-down)
-    (set-window-height height))
+  (interactive "nWindow height: ")
+  (split-window-below)
+  (windmove-down)
+  (set-window-height height))
 
-  (defun set-window-width (width)
-    "Set the width of the current window to WIDTH."
-    (interactive "nNew window width: ")
-    (let ((window (get-buffer-window (current-buffer))))
-      (when window
-	    (enlarge-window-horizontally width))))
+(defun set-window-width (width)
+  "Set the width of the current window to WIDTH."
+  (interactive "nNew window width: ")
+  (let ((window (get-buffer-window (current-buffer))))
+    (when window
+      (enlarge-window-horizontally width))))
 
-  (defun split-repl ()
-    (interactive)
-    (split-window-below-with-height 15)
-    (ielm)
-    (setq splitwin (selected-window))
-    (add-hook 'kill-buffer-hook
-	      (lambda ()
-		(when (eq splitwin (selected-window))
-		  (delete-window (selected-window)))))
-    )
+(defun split-repl ()
+  (interactive)
+  (split-window-below-with-height 15)
+  (ielm)
+  (setq splitwin (selected-window))
+  (add-hook 'kill-buffer-hook
+            (lambda ()
+              (when (eq splitwin (selected-window))
+                (delete-window (selected-window))))))
 
 (defun split-vterm (height)
   "Split vterm"
@@ -359,12 +360,17 @@
   "L" 'next-buffer
   "H" 'previous-buffer
   "E" 'evil-end-of-visual-line
-  "-" 'evil-end-of-line
+  "]" 'evil-end-of-line
+  "[" 'evil-beginning-of-line
   "B" 'evil-beginning-of-visual-line
   "P" 'evil-jump-item
-  "C-o" 'toggle-transparency
   "g/" 'evilnc-comment-or-uncomment-lines
-  ";" 'counsel-M-x)
+  ";" 'counsel-M-x
+
+  ;;; CTRL Maps
+  "C-o" 'toggle-transparency
+  "C-," 'evil-window-increase-width
+  "C-." 'evil-window-decrease-width)
 
 (general-def '(normal insert) 'override
   "C-<tab>" '(counsel-switch-buffer :which-key "Switch Buffer")
@@ -407,7 +413,7 @@
   "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 (spaceleader-keys
-  "SPC" '(projectile-find-file :which-key "Find file in project")
+  ;; "SPC" '(projectile-find-file :which-key "Find file in project")
 
   "w" '(evil-window-map :which-key "Window")
   "l" '(lsp-mode-map :which-key "Window")
@@ -423,6 +429,7 @@
 (spaceleader-keys
   :prefix "SPC t"
   "t" '(counsel-load-theme :which-key "choose theme")
+  "c" '(display-time-mode :which-key "Display Time")
   "s" '(hydra-text-scale/body :which-key "scale text")
   "w" '(toggle-transparency :which-key "scale text")
   "l" '(display-line-numbers-mode :which-key "Toogle line numbers")
@@ -679,7 +686,7 @@
 
 (use-package doom-themes
   :demand
-  :init (load-theme 'doom-tokyo-night t))
+  :init (load-theme 'doom-feather-dark t))
 
 (use-package doom-modeline
   :demand t
@@ -1052,6 +1059,166 @@
   :after yasnippet
   :straight (doom-snippets :type git :host github :repo "hlissner/doom-snippets" :files ("*.el" "*")))
 
+(defun spaceorg-mode-setup ()
+  (setq org-src-tab-acts-natively t
+        org-src-tab-acts-natively     t
+        org-src-preserve-indentation  t
+        org-src-fontify-natively      t)
+  (org-indent-mode)
+  (org-overview)
+  (display-line-numbers-mode 0)
+  (variable-pitch-mode t)
+  (hs-minor-mode t)
+  (visual-line-mode 1))
+
+(use-package org
+  :hook (org-mode . spaceorg-mode-setup)
+  :config
+  (setq org-ellipsis " ↴"
+        org-hide-emphasis-markers t
+        org-agenda-files '("~/Books/Personal/Tasks.org")
+        org-agenda-start-with-log-mode t
+        org-log-done 'time
+        org-log-into-drawer t)
+  (spaceorg-font-setup))
+
+  (use-package org-bullets
+    :after org
+    :hook (org-mode . org-bullets-mode)
+    :custom
+    (org-bullets-bullet-list '("●" "🧿" "✿" "◉" "●" "◉")))
+
+(defun org-wrap-verbatim ()
+  (interactive)
+  (wrap-- "="))
+
+(defun org-wrap-code ()
+  (interactive)
+  (wrap-- "~"))
+
+(defun org-wrap-strike ()
+  (interactive)
+  (wrap-- "+"))
+
+(defun org-wrap-bold ()
+  (interactive)
+  (wrap-- "*"))
+
+(defun org-wrap-italics ()
+  (interactive)
+  (wrap-- "/"))
+
+(defun org-run-code-block ()
+  (interactive)
+  (org-ctrl-c-ctrl-c)
+  (org-mode))
+
+(general-m
+  :keymaps 'org-mode-map
+  :states '(visual normal)
+  "r" '(org-run-code-block :which-key "Run Code block")
+  "c" '(org-wrap-code :which-key "Wrap Code")
+  "b" '(org-wrap-bold :which-key "Wrap Bold")
+  "i" '(org-wrap-italics :which-key "Wrap italics")
+  "x" '(org-wrap-strike :which-key "Stike Seletion")
+  "v" '(org-wrap-verbatim :which-key "Wrap Verbatim")
+  "l" '(org-insert-link :which-key "Insert Link"))
+
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '((emacs-lisp . t)
+   (python . t)
+   (jupyter . t)
+   (ein . t)
+   (julia . t)
+   (lua . t)))
+
+(setq org-startup-with-inline-images t)
+
+(eval-after-load 'org
+  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images))
+
+(setq org-babel-default-header-args:jupyter-python
+      '((:results . "raw")
+        (:session . "jupyter-python")
+        (:kernel . "python3")
+        (:async . "yes")
+        (:pandoc . "t")
+        (:exports . "both")
+        (:cache .   "no")
+        (:noweb . "no")
+        (:hlines . "no")
+        (:tangle . "no")
+        (:eval . "never-export")))
+
+(setq org-babel-default-header-args:jupyter-julia
+      '((:async . "yes")
+        (:session . "jupyter-julia")
+        (:kernel . "julia")
+        (:exports . "both")
+        (:eval . "never-export")))
+
+;; (add-to-list 'org-src-lang-modes '("jupyter-python" . python))
+(add-to-list 'org-src-lang-modes '("jupyter-julia" . julia))
+(add-to-list 'org-src-lang-modes '("jupyter-R" . R))
+
+(setq org-babel-default-header-args:ein-python '((:session . "localhost:8888/emacsnotebook.ipynb")))
+
+(require 'org-tempo)
+(add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+(add-to-list 'org-structure-template-alist '("py" . "src python"))
+(add-to-list 'org-structure-template-alist '("ein" . "src ein-python"))
+(add-to-list 'org-structure-template-alist '("jp" . "src jupyter-python"))
+(add-to-list 'org-structure-template-alist '("jpn" . "src jupyter-python :results none"))
+(add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+(add-to-list 'org-structure-template-alist '("jl" . "src julia"))
+
+
+(setq org-confirm-babel-evaluate nil)
+
+(push '("conf-unix" . conf-unix) org-src-lang-modes)
+
+(defun spaceorg-babel-tangle-config ()
+  (interactive)
+  (when (string-equal (buffer-file-name)
+                      (expand-file-name "~/.emacs.d/Config.org"))
+    (let ((org-confirm-babel-evaluate nil))
+      (org-babel-tangle))))
+
+(add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'spaceorg-babel-tangle-config)))
+
+(use-package pdf-tools
+  :demand t
+  :config
+  (pdf-tools-install))
+
+(add-hook 'pdf-view-mode-hook
+          (lambda ()
+            (progn
+              (hide-mode-line-mode 0))))
+
+(general-def 'normal 'pdf-view-mode-map
+  "J" 'pdf-view-next-page
+  "w" 'pdf-view-fit-width-to-window
+  "K" 'pdf-view-previous-page
+  "c" 'pdf-view-center-in-window
+  "i" 'pdf-view-midnight-minor-mode)
+
+(defun fds-pdf-outline ()
+  (interactive)
+  (pdf-outline-display-link)
+  (pdf-outline-select-pdf-window))
+(defun poww ()
+  (interactive)
+  (set-window-width -70))
+
+
+(general-def 'normal 'pdf-outline-buffer-mode-map
+  "f" 'fds-pdf-outline
+  "a" 'pdf-outline-select-pdf-window
+  "d" 'pdf-outline-display-link
+  "o" 'poww)
+
 (use-package vterm
   :commands vterm
   :config
@@ -1210,31 +1377,6 @@
   (setq-default shr-inhibit-images t)   ; toggle with `I`
   (setq-default shr-use-fonts nil))
 
-(use-package pdf-tools
-  :demand t
-  :config
-  (pdf-tools-install))
-
-(add-hook 'pdf-view-mode-hook
-          (lambda ()
-            (progn
-              (hide-mode-line-mode 0))))
-
-(defun poww ()
-  (interactive)
-  (set-window-width -80))
-
-(general-def 'normal 'pdf-view-mode-map
-  "J" 'pdf-view-next-page
-  "w" 'pdf-view-fit-width-to-window
-  "K" 'pdf-view-previous-page
-  "i" 'pdf-view-midnight-minor-mode)
-
-(general-def 'normal 'pdf-outline-buffer-mode-map
-  "a" 'evil-window-left
-  "d" 'pdf-outline-display-link
-  "o" 'poww)
-
 (use-package perspective
   :bind
   ("C-x C-b" . persp-list-buffers)         ; or use a nicer switcher, see below
@@ -1250,131 +1392,3 @@
 
 (use-package visual-fill-column
   :hook (org-mode . spaceorg-mode-visual-fill))
-
-(defun spaceorg-mode-setup ()
-  (setq org-src-tab-acts-natively t
-        org-src-tab-acts-natively     t
-        org-src-preserve-indentation  t
-        org-src-fontify-natively      t)
-  (org-indent-mode)
-  (org-overview)
-  (display-line-numbers-mode 0)
-  (variable-pitch-mode t)
-  (hs-minor-mode t)
-  (visual-line-mode 1))
-
-(use-package org
-  :hook (org-mode . spaceorg-mode-setup)
-  :config
-  (setq org-ellipsis " ↴"
-        org-hide-emphasis-markers t
-        org-agenda-files '("~/Books/Personal/Tasks.org")
-        org-agenda-start-with-log-mode t
-        org-log-done 'time
-        org-log-into-drawer t)
-  (spaceorg-font-setup))
-
-  (use-package org-bullets
-    :after org
-    :hook (org-mode . org-bullets-mode)
-    :custom
-    (org-bullets-bullet-list '("●" "🧿" "✿" "◉" "●" "◉")))
-
-(defun org-wrap-verbatim ()
-  (interactive)
-  (wrap-- "="))
-
-(defun org-wrap-code ()
-  (interactive)
-  (wrap-- "~"))
-
-(defun org-wrap-strike ()
-  (interactive)
-  (wrap-- "+"))
-
-(defun org-wrap-bold ()
-  (interactive)
-  (wrap-- "*"))
-
-(defun org-wrap-italics ()
-  (interactive)
-  (wrap-- "/"))
-
-(defun org-run-code-block ()
-  (interactive)
-  (org-ctrl-c-ctrl-c)
-  (org-mode))
-
-(general-m
-  :keymaps 'org-mode-map
-  :states '(visual normal)
-  "r" '(org-run-code-block :which-key "Run Code block")
-  "c" '(org-wrap-code :which-key "Wrap Code")
-  "b" '(org-wrap-bold :which-key "Wrap Bold")
-  "i" '(org-wrap-italics :which-key "Wrap italics")
-  "x" '(org-wrap-strike :which-key "Stike Seletion")
-  "v" '(org-wrap-verbatim :which-key "Wrap Verbatim")
-  "l" '(org-insert-link :which-key "Insert Link"))
-
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)
-   (python . t)
-   (jupyter . t)
-   (ein . t)
-   (julia . t)
-   (lua . t)))
-
-(setq org-startup-with-inline-images t)
-
-(eval-after-load 'org
-  (add-hook 'org-babel-after-execute-hook 'org-redisplay-inline-images))
-
-(setq org-babel-default-header-args:jupyter-python
-      '((:results . "raw")
-        (:session . "jupyter-python")
-        (:kernel . "python3")
-        (:async . "yes")
-        (:pandoc . "t")
-        (:exports . "both")
-        (:cache .   "no")
-        (:noweb . "no")
-        (:hlines . "no")
-        (:tangle . "no")
-        (:eval . "never-export")))
-
-(setq org-babel-default-header-args:jupyter-julia
-      '((:async . "yes")
-        (:session . "jupyter-julia")
-        (:kernel . "julia")
-        (:exports . "both")
-        (:eval . "never-export")))
-
-;; (add-to-list 'org-src-lang-modes '("jupyter-python" . python))
-(add-to-list 'org-src-lang-modes '("jupyter-julia" . julia))
-(add-to-list 'org-src-lang-modes '("jupyter-R" . R))
-
-(setq org-babel-default-header-args:ein-python '((:session . "localhost:8888/emacsnotebook.ipynb")))
-
-(require 'org-tempo)
-(add-to-list 'org-structure-template-alist '("sh" . "src shell"))
-(add-to-list 'org-structure-template-alist '("py" . "src python"))
-(add-to-list 'org-structure-template-alist '("ein" . "src ein-python"))
-(add-to-list 'org-structure-template-alist '("jp" . "src jupyter-python"))
-(add-to-list 'org-structure-template-alist '("jpn" . "src jupyter-python :results none"))
-(add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-(add-to-list 'org-structure-template-alist '("jl" . "src julia"))
-
-
-(setq org-confirm-babel-evaluate nil)
-
-(push '("conf-unix" . conf-unix) org-src-lang-modes)
-
-(defun spaceorg-babel-tangle-config ()
-  (interactive)
-  (when (string-equal (buffer-file-name)
-                      (expand-file-name "~/.emacs.d/Config.org"))
-    (let ((org-confirm-babel-evaluate nil))
-      (org-babel-tangle))))
-
-(add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'spaceorg-babel-tangle-config)))
