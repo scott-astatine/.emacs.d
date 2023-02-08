@@ -335,7 +335,7 @@
   :demand t
   :config
   (setq evil-escape-key-sequence "kj"
-        evil-escape-delay 0.15)
+        evil-escape-delay 0.09)
   (evil-escape-mode 1))
 
 (use-package hydra)
@@ -415,6 +415,7 @@
 (spaceleader-keys
   ;; "SPC" '(projectile-find-file :which-key "Find file in project")
 
+  "m" '(counsel-imenu :which-key "IMenu")
   "w" '(evil-window-map :which-key "Window")
   "l" '(lsp-mode-map :which-key "Window")
   "ww" '(set-window-width :which-key "Set Width")
@@ -441,6 +442,7 @@
 (spaceleader-keys
   :prefix "SPC f"
   "s" '(save-buffer :which-key "Save Buffer")
+  "e" '(rename-file :which-key "Rename File")
   "o" '(counsel-find-file :which-key "Open File")
   "f" '(projectile-find-file :which-key "Find file in project")
   "r" '(counsel-recentf :which-key "Open Recent File"))
@@ -477,7 +479,6 @@
   :prefix "SPC o"
   "T" '(mtt :which-key "Open Term")
   "t" '(split-h-vterm-window :which-key "Open Term")
-  "i" '(counsel-imenu :which-key "IMenu")
   "j" '((lambda () (interactive) (find-file "~/Books/Personal/Journal.org")) :which-key "Open Journal")
   "c" '((lambda () (interactive) (find-file "~/.emacs.d/Config.org")) :which-key "Open Config")
   "r" '(split-repl :which-key "Elisp REPL")
@@ -686,7 +687,7 @@
 
 (use-package doom-themes
   :demand
-  :init (load-theme 'doom-feather-dark t))
+  :init (load-theme 'doom-dracula t))
 
 (use-package doom-modeline
   :demand t
@@ -1217,6 +1218,7 @@
   "f" 'fds-pdf-outline
   "a" 'pdf-outline-select-pdf-window
   "d" 'pdf-outline-display-link
+  "s" 'pdf-outline-follow-mode
   "o" 'poww)
 
 (use-package vterm
