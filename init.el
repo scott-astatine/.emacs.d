@@ -10,8 +10,6 @@
 (global-hl-line-mode t)
 (set-face-background 'hl-line "#4f4f5f55")
 
-;;(hs-minor-mode)
-
 (add-to-list 'native-comp-eln-load-path (expand-file-name "eln-cache/" user-emacs-directory))
 
 (defvar spacedefault-font-size 105)
@@ -77,6 +75,14 @@
       (enlarge-window (- height (window-total-height)))
     (shrink-window (- (window-total-height) height))))
 
+(defun set-window-width (width)
+  "Set the width of the current window to WIDTH."
+  (interactive "nNew window width: ")
+   (if (> width (window-width))
+      (enlarge-window-horizontally (- width (window-width)))
+    (shrink-window-horizontally (- (window-width) width))))
+
+
 (defun split-window-below-with-height (height)
   "Split the current window horizontally and switch to the new window.
      The new window will be given the specified HEIGHT."
@@ -84,13 +90,6 @@
   (split-window-below)
   (windmove-down)
   (set-window-height height))
-
-(defun set-window-width (width)
-  "Set the width of the current window to WIDTH."
-  (interactive "nNew window width: ")
-  (let ((window (get-buffer-window (current-buffer))))
-    (when window
-      (enlarge-window-horizontally width))))
 
 (defun split-repl ()
   (interactive)
@@ -359,10 +358,10 @@
 (general-def '(normal visual) 'override
   "L" 'next-buffer
   "H" 'previous-buffer
-  "E" 'evil-end-of-visual-line
-  "]" 'evil-end-of-line
-  "[" 'evil-beginning-of-line
-  "B" 'evil-beginning-of-visual-line
+  "]" 'evil-end-of-visual-line
+  "[" 'evil-beginning-of-visual-line
+  "E" 'evil-end-of-line
+  "B" 'evil-beginning-of-line
   "P" 'evil-jump-item
   "g/" 'evilnc-comment-or-uncomment-lines
   ";" 'counsel-M-x
@@ -380,7 +379,6 @@
 (general-def 'insert
  "C-g" 'evil-normal-state
  "C-h" 'evil-delete-backward-char-and-join)
-
 (general-def '(normal visual)
   "SPC" nil
   "m" nil)
@@ -556,7 +554,6 @@
 
 (use-package elcord
   :config
-  (elcord-mode t)
   (setq elcord-refresh-rate 5))
 
 (use-package undo-tree
@@ -687,7 +684,7 @@
 
 (use-package doom-themes
   :demand
-  :init (load-theme 'doom-dracula t))
+  :init (load-theme 'doom-ayu-dark t))
 
 (use-package doom-modeline
   :demand t
@@ -1196,9 +1193,21 @@
 (add-hook 'pdf-view-mode-hook
           (lambda ()
             (progn
-              (hide-mode-line-mode 0))))
+	      (setq cursor-type nil)
+              (blink-cursor-mode 0)
+              )))
+
+(defun pdf-outl ()
+  (interactive)
+  (pdf-outline)
+  (pdf-outline-move-to-current-page)
+  (set-window-width 50))
 
 (general-def 'normal 'pdf-view-mode-map
+  "o" 'pdf-outl
+  "f" nil
+  "u" 'pdf-view-scroll-down-or-previous-page
+  "d" 'pdf-view-scroll-up-or-next-page
   "J" 'pdf-view-next-page
   "w" 'pdf-view-fit-width-to-window
   "K" 'pdf-view-previous-page
@@ -1209,17 +1218,19 @@
   (interactive)
   (pdf-outline-display-link)
   (pdf-outline-select-pdf-window))
-(defun poww ()
-  (interactive)
-  (set-window-width -70))
 
+(defun pdf-outline-qui ()
+  (interactive)
+  (kill-this-buffer)
+  (delete-window))
 
 (general-def 'normal 'pdf-outline-buffer-mode-map
   "f" 'fds-pdf-outline
+  "o" 'outline-toggle-children
+  "q" 'pdf-outline-qui
   "a" 'pdf-outline-select-pdf-window
   "d" 'pdf-outline-display-link
-  "s" 'pdf-outline-follow-mode
-  "o" 'poww)
+  "s" 'pdf-outline-follow-mode)
 
 (use-package vterm
   :commands vterm
@@ -1316,7 +1327,7 @@
 ;;      (t (emms-notifications-message track-name)))))
 
 ;; (spaceleader-keys
-;;   :prefix "SPC m" 
+;;   :prefix "SPC k" 
 ;;   "m" '(counsel-major :which-key "Major modes")
 ;;   "n" '(emms-next :which-key "Next")
 ;;   "s" '(emms-stop :which-key "Next")
