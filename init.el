@@ -1,14 +1,17 @@
 (setq scroll-step 1
       scroll-margin 2
+      large-file-warning-threshold nil
       pixel-scroll-precision-large-scroll-height 40.0
       url-history-file (expand-file-name "url/history" user-emacs-directory))
+
 
 (load-file "~/.emacs.d/hide-mode-line.el")
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
-(global-hl-line-mode t)
-(set-face-background 'hl-line "#4f4f5f55")
+(hl-line-mode t)
+(set-face-background 'hl-line "#4f4f4f")
+(blink-cursor-mode 0)
 
 (add-to-list 'native-comp-eln-load-path (expand-file-name "eln-cache/" user-emacs-directory))
 
@@ -19,7 +22,7 @@
 (set-face-attribute 'fixed-pitch nil :font spacedefault-code-font :height spacedefault-font-size :weight 'regular)
 
 ;;; Previous Font "Leckerli One" Princess Sofia
-(set-face-attribute 'variable-pitch nil :font "Pacifico" :height 165 :weight 'regular)
+(set-face-attribute 'variable-pitch nil :font "Salsa" :height 165 :weight 'regular)
 
 (variable-pitch-mode t)
 
@@ -63,7 +66,7 @@
                     ;; Also handle undocumented (<active> <inactive>) form.
                     ((numberp (cadr alpha)) (cadr alpha)))
               100)
-         '(85 . 50) '(100 . 100)))))
+         '(80 . 50) '(100 . 100)))))
 (toggle-transparency)
 
 (set-fringe-style 0)
@@ -366,31 +369,31 @@
   "g/" 'evilnc-comment-or-uncomment-lines
   ";" 'counsel-M-x
 
-  ;;; CTRL Maps
+  )
+
+
+;;; CTRL Maps
+
+(general-def '(normal insert) 'override
+  "C-<tab>" 'persp-counsel-switch-buffer
+  "C-n" 'persp-next
+  "C-p" 'persp-prev
+  "C-w" 'evil-window-map
+  "C-k" 'evil-scroll-line-up
+  "C-j" 'evil-scroll-line-down
   "C-o" 'toggle-transparency
+  "C-S-o" 'persp-switch
   "C-," 'evil-window-increase-width
   "C-." 'evil-window-decrease-width)
 
-(general-def '(normal insert) 'override
-  "C-<tab>" '(counsel-switch-buffer :which-key "Switch Buffer")
- "C-k" 'evil-scroll-line-up
- "C-j" 'evil-scroll-line-down)
-
 (general-def 'insert
- "C-g" 'evil-normal-state
- "C-h" 'evil-delete-backward-char-and-join)
+  "C-g" 'evil-normal-state
+  "C-h" 'evil-delete-backward-char-and-join)
+
+
 (general-def '(normal visual)
   "SPC" nil
   "m" nil)
-
-(general-define-key
-  :keymaps 'treemacs-mode-map
-  "a" 'windmove-right
-  "K" 'evil-scroll-line-up
-  "J" 'evil-scroll-line-down
-  "C-k" 'evil-scroll-line-up
-  "C-j" 'evil-scroll-line-down)
-
 
 (general-create-definer spaceleader-keys
   :keymaps 'override
@@ -411,19 +414,22 @@
   "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 (spaceleader-keys
-  ;; "SPC" '(projectile-find-file :which-key "Find file in project")
 
   "m" '(counsel-imenu :which-key "IMenu")
   "w" '(evil-window-map :which-key "Window")
-  "l" '(lsp-mode-map :which-key "Window")
   "ww" '(set-window-width :which-key "Set Width")
   "wi" '(set-window-height :which-key "Set Height")
-  "a" '(ace-select-window :which-key "Select Window")
-  "qq"'(save-buffers-kill-terminal :which-key "Exit Emacs")
-  "d"'(kill-this-buffer :which-key "Exit Emacs")
-  "ss"'(swiper :which-key "Search...")
+  "a"  '(ace-select-window :which-key "Select Window")
+  "qq" '(save-buffers-kill-terminal :which-key "Exit Emacs")
+  "d" '(kill-this-buffer :which-key "Exit Emacs")
 
   "e" '(treemacs-select-window :which-key "Treemacs Toggle"))
+
+(spaceleader-keys
+  :prefix "SPC s"
+  "s"'(swiper :which-key "Search...")
+  "t"'(gts-do-translate :which-key "Translate")
+  "d"'(dictionary-search :which-key "Search word..."))
 
 (spaceleader-keys
   :prefix "SPC t"
@@ -473,6 +479,7 @@
   (interactive)
   (multi-vterm)
   (hide-mode-line-mode))
+
 (spaceleader-keys
   :prefix "SPC o"
   "T" '(mtt :which-key "Open Term")
@@ -481,13 +488,14 @@
   "c" '((lambda () (interactive) (find-file "~/.emacs.d/Config.org")) :which-key "Open Config")
   "r" '(split-repl :which-key "Elisp REPL")
   "b" '(eww :which-key "eww")
+  "s" '(persp-switch-to-scratch-buffer :which-key "Open Scratch buffer")
   "e" '(eshell :which-key "Eshell"))
 
 (spaceleader-keys
   :prefix "SPC b"
   "l" '(evil-switch-to-windows-last-buffer :which-key "Kill Buffer")
   "k" '(kill-this-buffer :which-key "Kill Buffer")
-  "f" '(counsel-switch-buffer :which-key "Switch Buffer")
+  "f" '(persp-counsel-switch-buffer :which-key "Switch Buffer")
   "d" '(kill-buffer :which-key "Find & Kill"))
 
 (use-package async)
@@ -564,6 +572,15 @@
   :demand t
   :config
   (smartparens-global-mode))
+
+(use-package go-translate
+  :config
+  (setq gts-translate-list '(("en" "de") ("de" "en") ("fr" "en")))
+  (setq gts-default-translator
+        (gts-translator
+         :picker (gts-prompt-picker)
+         :engines (list (gts-google-engine))
+         :render (gts-buffer-render))))
 
 (use-package beacon
   :ensure t
@@ -657,7 +674,7 @@
         treemacs-is-never-other-window           t
         treemacs-missing-project-action          'remove
         treemacs-move-forward-on-expand          nil
-        treemacs-position                        'left
+        treemacs-position                        'right
         treemacs-recenter-after-project-jump     'always
         treemacs-recenter-after-project-expand   'on-distance
         treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
@@ -682,9 +699,16 @@
 (use-package treemacs-evil
   :demand t)
 
+(general-define-key :keymaps 'treemacs-mode-map
+  "a" 'windmove-left
+  "K" 'evil-scroll-line-up
+  "J" 'evil-scroll-line-down
+  "C-k" 'evil-scroll-line-up
+  "C-j" 'evil-scroll-line-down)
+
 (use-package doom-themes
   :demand
-  :init (load-theme 'doom-ayu-dark t))
+  :init (load-theme 'modus-vivendi-deuteranopia t))
 
 (use-package doom-modeline
   :demand t
@@ -901,10 +925,10 @@
 ;;   :keymaps ein:ipdb-mode-map
 ;;   "d" '(ein:worksheet-delete-cell :which-key "Delete Cell"))
 
-(use-package jupyter
-  :commands (jupyter-run-repl jupyter-connect-repl)
-  :config
-  (setq jupyter-server-buffer-name "*jupyter-server*"))
+;; (use-package jupyter
+;;   :commands (jupyter-run-repl jupyter-connect-repl)
+;;   :config
+;;   (setq jupyter-server-buffer-name "*jupyter-server*"))
 
 (general-def 'normal emacs-lisp-mode-map 
   "K" 'elisp-slime-nav-describe-elisp-thing-at-point)
@@ -932,8 +956,8 @@
   :ensure t
   :gfhook #'lsp
   :mode (("\\.[tj]sx\\'" . web-mode)
-	 ("\\.[tj]s\\'" . web-mode)
-	 ("\\.html\\'" . web-mode)))
+         ("\\.[tj]s\\'" . web-mode)
+         ("\\.html\\'" . web-mode)))
 
 (use-package lsp-tailwindcss
   :straight (:type git :host github :repo "merrickluo/lsp-tailwindcss"))
@@ -1057,8 +1081,10 @@
   :after yasnippet
   :straight (doom-snippets :type git :host github :repo "hlissner/doom-snippets" :files ("*.el" "*")))
 
+
+
 (defun spaceorg-mode-setup ()
-  (setq org-src-tab-acts-natively t
+  (setq org-src-tab-acts-natively     t
         org-src-tab-acts-natively     t
         org-src-preserve-indentation  t
         org-src-fontify-natively      t)
@@ -1080,11 +1106,11 @@
         org-log-into-drawer t)
   (spaceorg-font-setup))
 
-  (use-package org-bullets
-    :after org
-    :hook (org-mode . org-bullets-mode)
-    :custom
-    (org-bullets-bullet-list '("●" "🧿" "✿" "◉" "●" "◉")))
+(use-package org-bullets
+  :after org
+  :hook (org-mode . org-bullets-mode)
+  :custom
+  (org-bullets-bullet-list '("●" "🧿" "✿" "◉" "●" "◉")))
 
 (defun org-wrap-verbatim ()
   (interactive)
@@ -1126,7 +1152,7 @@
  'org-babel-load-languages
  '((emacs-lisp . t)
    (python . t)
-   (jupyter . t)
+   ;; (jupyter . t)
    (ein . t)
    (julia . t)
    (lua . t)))
@@ -1157,8 +1183,8 @@
         (:eval . "never-export")))
 
 ;; (add-to-list 'org-src-lang-modes '("jupyter-python" . python))
-(add-to-list 'org-src-lang-modes '("jupyter-julia" . julia))
-(add-to-list 'org-src-lang-modes '("jupyter-R" . R))
+;; (add-to-list 'org-src-lang-modes '("jupyter-julia" . julia))
+;; (add-to-list 'org-src-lang-modes '("jupyter-R" . R))
 
 (setq org-babel-default-header-args:ein-python '((:session . "localhost:8888/emacsnotebook.ipynb")))
 
@@ -1166,8 +1192,8 @@
 (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
 (add-to-list 'org-structure-template-alist '("py" . "src python"))
 (add-to-list 'org-structure-template-alist '("ein" . "src ein-python"))
-(add-to-list 'org-structure-template-alist '("jp" . "src jupyter-python"))
-(add-to-list 'org-structure-template-alist '("jpn" . "src jupyter-python :results none"))
+;; (add-to-list 'org-structure-template-alist '("jp" . "src jupyter-python"))
+;; (add-to-list 'org-structure-template-alist '("jpn" . "src jupyter-python :results none"))
 (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
 (add-to-list 'org-structure-template-alist '("jl" . "src julia"))
 
@@ -1188,31 +1214,35 @@
 (use-package pdf-tools
   :demand t
   :config
+  (defun hide-cursor ()
+    (interactive)
+    (setq cursor-type nil))
+
+  ;;; Hooks
+  (add-hook 'pdf-annot-list-mode-hook #'hide-mode-line-mode)
+  (add-hook 'pdf-view-mode-hook
+            (lambda ()
+              (hide-mode-line-mode 1)
+              (hide-cursor)
+                ))
+
+
   (pdf-tools-install))
 
-(add-hook 'pdf-view-mode-hook
-          (lambda ()
-            (progn
-	      (setq cursor-type nil)
-              (blink-cursor-mode 0)
-              )))
+(use-package saveplace-pdf-view
+  :demand t
+  :config
+  (save-place-mode 1))
+
+;; (add-hook 'window-buffer-change-functions 'my-bind-pdf-outline-to-window)
 
 (defun pdf-outl ()
   (interactive)
   (pdf-outline)
   (pdf-outline-move-to-current-page)
-  (set-window-width 50))
-
-(general-def 'normal 'pdf-view-mode-map
-  "o" 'pdf-outl
-  "f" nil
-  "u" 'pdf-view-scroll-down-or-previous-page
-  "d" 'pdf-view-scroll-up-or-next-page
-  "J" 'pdf-view-next-page
-  "w" 'pdf-view-fit-width-to-window
-  "K" 'pdf-view-previous-page
-  "c" 'pdf-view-center-in-window
-  "i" 'pdf-view-midnight-minor-mode)
+  (set-window-width 50)
+  ;; (set-window-dedicated-p (selected-window) t)
+  )
 
 (defun fds-pdf-outline ()
   (interactive)
@@ -1222,15 +1252,58 @@
 (defun pdf-outline-qui ()
   (interactive)
   (kill-this-buffer)
-  (delete-window))
+  (quit-window))
+
+(defun poutkill ()
+  (interactive)
+  (pdf-outline)
+  (pdf-outline-quit-and-kill))
+
+(general-def 'normal 'pdf-view-mode-map
+  "o" 'pdf-outl
+  "q" nil
+  "x" 'poutkill
+  "a" 'hide-cursor
+  "f" 'isearch-forward
+  "r" 'image-rotate
+  "u" 'pdf-view-scroll-down-or-previous-page
+  "d" 'pdf-view-scroll-up-or-next-page
+  "J" 'pdf-view-next-page
+  "w" 'pdf-view-fit-width-to-window
+  "K" 'pdf-view-previous-page
+  "c" 'pdf-view-center-in-window
+  "i" 'pdf-view-midnight-minor-mode)
+
 
 (general-def 'normal 'pdf-outline-buffer-mode-map
   "f" 'fds-pdf-outline
   "o" 'outline-toggle-children
-  "q" 'pdf-outline-qui
+  "q" 'pdf-outline-quit-and-kill
   "a" 'pdf-outline-select-pdf-window
   "d" 'pdf-outline-display-link
   "s" 'pdf-outline-follow-mode)
+
+(general-def 'normal 'doc-view-mode-map
+  "j" 'doc-view-next-line-or-next-page
+  "J" 'doc-view-next-page
+  "K" 'doc-view-previous-page
+  "k" 'doc-view-previous-line-or-previous-page)
+
+(use-package nov
+  :init
+  (setq nov-text-width t)
+  (setq visual-fill-column-center-text t)
+  (add-hook 'nov-mode-hook 'visual-line-mode)
+  (add-hook 'nov-mode-hook 'hl-line-mode)
+  (add-hook 'nov-mode-hook 'visual-fill-column-mode)
+  (setq nov-text-width nil)
+  (setq nov-unzip-program (executable-find "bsdtar")
+        nov-unzip-args '("-xC" directory "-f" filename))
+  (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
+
+(general-def 'normal 'nov-mode-map
+  "K" 'nov-previous-document
+  "J" 'nov-next-document)
 
 (use-package vterm
   :commands vterm
@@ -1391,10 +1464,9 @@
   (setq-default shr-use-fonts nil))
 
 (use-package perspective
-  :bind
-  ("C-x C-b" . persp-list-buffers)         ; or use a nicer switcher, see below
+  :ensure t
   :custom
-  (persp-mode-prefix-key (kbd "C-c M-p"))  ; pick your own prefix key here
+  (persp-mode-prefix-key (kbd "C-c p"))
   :init
   (persp-mode))
 
@@ -1405,3 +1477,5 @@
 
 (use-package visual-fill-column
   :hook (org-mode . spaceorg-mode-visual-fill))
+
+(kill-buffer "*Messages*")
