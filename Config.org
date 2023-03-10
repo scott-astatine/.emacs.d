@@ -18,7 +18,7 @@
 (scroll-bar-mode -1)
 (tool-bar-mode -1)
 (tooltip-mode -1)
-(set-fringe-mode 10)
+(set-fringe-mode 1)
 (menu-bar-mode -1)
 (column-number-mode)
 (global-display-line-numbers-mode t)
@@ -133,7 +133,7 @@ Font config for different headers in orgmode & more appearence things
                   (org-level-6 . 1.02)
                   (org-level-7 . 1.02)
                   (org-level-8 . 1.02)))
-    (set-face-attribute (car face) nil :font spacedefault-code-font :weight 'regular :height (cdr face)))
+    (set-face-attribute (car face) nil :font "Salsa" :weight 'regular :height (cdr face)))
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
@@ -143,6 +143,115 @@ Font config for different headers in orgmode & more appearence things
   ;; (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   ;; (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
+
+#+end_src
+
+* Package Manager
+** package.el
+#+begin_src emacs-lisp  
+;; Initialize package sources
+;; (require 'package)
+;; (eval-and-compile
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("org" . "https://orgmode.org/elpa/")
+                         ("elpa" . "https://elpa.gnu.org/packages/")))
+;; (package-initialize)
+;; (unless package-archive-contents
+;;   (package-refresh-contents))
+
+;; ;; Initialize use-package on non-Linux platforms
+;; (unless (package-installed-p 'use-package)
+;;   (package-install 'use-package))
+
+;; (require 'use-package)
+;; (setq use-package-always-ensure t))
+
+#+end_src
+
+** =straight.el= and =use-package.el=
+Package installation:
+- =:straight= to specify recipes for custom or local packages
+Package loading:
+- =:disabled= for disabled packages (e.g. unused themes)
+- =:if=, =:when=, and =:unless= for conditionally loading/configuring the package
+- =:after= when it only makes sense to load one package after another (not used for "core" packages like =evil= that are loaded immediately) (usually not necessary)
+- =:demand t= for packages that should be loaded immediately (e.g. =evil=)
+- =:defer number= for packages whose functionality should be quickly available but is not necessary immediately (use sparingly)
+- =:defer-incrementally= for packages with lots of dependencies (functionality from doom)
+- =:ghook= to add to hooks that will later run and load the package
+- =:mode= as a temporary solution for major modes that don't add to =auto-mode-alist=
+- =:commands= as a temporary solution for packages that don't have autoload cookies
+- =:general= for any keybindings meant to load the package (and not others; I use this keyword only to make it very clear how the package will be loaded)
+- =:init= for any settings that need to be set before loading the package (e.g. =evil-want-keybinding=) and for function calls meant to load the package (e.g. enabling a global minor mode, setting another package's variable to a function from this package, etc.)
+
+Note that using =:after= will put the rest of the non-installation configuration in an ~eval-after-load~ (including the =:init= section, the =(require package)= statement generated from =:demand t=, etc.). Also note that by default only =:init= can fail if the package isn't successfully installed (see ~use-package-check-before-init~); specifying =:demand=, for example, will cause an error if the package fails to install.
+
+As a workaround, I'm setting a default value for =:when= in ~use-package-defaults~ (that is used even when =:when= is explicitly specified) to prevent package configuration if package installation fails. See [[https://github.com/jwiegley/use-package/issues/693][issue 693]] and [[https://github.com/jwiegley/use-package/issues/739][issue 739]].
+
+Package configuration:
+- =:blackout= (or =:diminish= or =:delight=) for diminishing minor mode names
+- =:gfhook= for any setup configuration for a mode (e.g. set local variables or enable/disable minor modes)
+- =:config= for any basic package setup; more complicated setup should go in specific subheadings
+
+In the =:config= section, I generally put settings (~setq~ then any face configuration then ~add-hook~), then keybindings, then enabling any modes, and then any other configuration.
+*** Straight
+Install, load, and configure =straight.el=:
+#+begin_src emacs-lisp
+(setq straight-repository-branch "develop"
+      straight-enable-use-package-integration t
+      straight-check-for-modifications '(check-on-save find-when-checking)
+      straight-use-package-by-default t
+      straight-cache-autoloads t
+      straight-host-usernames '((github . "scott-astatine")
+                                (gitlab . "scott-astatine")))
+
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el"
+                         user-emacs-directory))
+      (bootstrap-version 5))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  ;; (benchmark 1 `(load ,bootstrap-file nil 'nomessage))
+  (load bootstrap-file nil 'nomessage))
+#+end_src
+
+*** Use-package
+Install =use-package.el= with optional dependencies and configure:
+#+begin_src emacs-lisp
+(straight-use-package 'use-package)
+
+(eval-when-compile
+  (require 'use-package)
+  (setq use-package-always-defer t))
+
+;; demote installation errors to messages
+;; this variable is no longer changed by straight
+;; (advice-add use-package-ensure-function :around #'noct-use-package-ensure)
+(when (bound-and-true-p noct-with-demoted-errors)
+  (advice-add 'straight-use-package :around #'noct-inhibit-error-advice))
+;; can test with something like this:
+;; (use-package does-not-exist)
+
+(use-package blackout
+  :straight (blackout :host github :repo "raxod502/blackout")
+  :demand t)
+#+end_src
+
+** .emacs.d Management
+
+#+begin_src emacs-lisp
+
+(use-package no-littering
+  :ensure t)
+
+(setq auto-save-file-name-transforms
+      `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
 
 #+end_src
 
@@ -169,8 +278,9 @@ Font config for different headers in orgmode & more appearence things
 
 ** Window Related Funcs
 #+begin_src emacs-lisp
-(set-fringe-style 0)
-(setq window-divider-default-right-width 3)
+(set-fringe-style 1)
+(setq window-divider-default-right-width 2)
+
 (defun set-window-height (height)
   "Set the height of the current window to the specified HEIGHT."
   (interactive "nWindow height: ")
@@ -204,6 +314,11 @@ Font config for different headers in orgmode & more appearence things
               (when (eq splitwin (selected-window))
                 (delete-window (selected-window))))))
 
+(defun quit-window-and-kill ()
+  (interactive)
+  (let ((win (selected-window)))
+    (evil-window-prev 2)
+    (quit-window t win)))
 #+end_src
 
 ** Vterm Popup
@@ -356,115 +471,6 @@ Font config for different headers in orgmode & more appearence things
 
 #+end_src
 
-* Package Manager
-** package.el
-#+begin_src emacs-lisp  
-;; Initialize package sources
-;; (require 'package)
-;; (eval-and-compile
-(setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("org" . "https://orgmode.org/elpa/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")))
-;; (package-initialize)
-;; (unless package-archive-contents
-;;   (package-refresh-contents))
-
-;; ;; Initialize use-package on non-Linux platforms
-;; (unless (package-installed-p 'use-package)
-;;   (package-install 'use-package))
-
-;; (require 'use-package)
-;; (setq use-package-always-ensure t))
-
-#+end_src
-
-** =straight.el= and =use-package.el=
-Package installation:
-- =:straight= to specify recipes for custom or local packages
-Package loading:
-- =:disabled= for disabled packages (e.g. unused themes)
-- =:if=, =:when=, and =:unless= for conditionally loading/configuring the package
-- =:after= when it only makes sense to load one package after another (not used for "core" packages like =evil= that are loaded immediately) (usually not necessary)
-- =:demand t= for packages that should be loaded immediately (e.g. =evil=)
-- =:defer number= for packages whose functionality should be quickly available but is not necessary immediately (use sparingly)
-- =:defer-incrementally= for packages with lots of dependencies (functionality from doom)
-- =:ghook= to add to hooks that will later run and load the package
-- =:mode= as a temporary solution for major modes that don't add to =auto-mode-alist=
-- =:commands= as a temporary solution for packages that don't have autoload cookies
-- =:general= for any keybindings meant to load the package (and not others; I use this keyword only to make it very clear how the package will be loaded)
-- =:init= for any settings that need to be set before loading the package (e.g. =evil-want-keybinding=) and for function calls meant to load the package (e.g. enabling a global minor mode, setting another package's variable to a function from this package, etc.)
-
-Note that using =:after= will put the rest of the non-installation configuration in an ~eval-after-load~ (including the =:init= section, the =(require package)= statement generated from =:demand t=, etc.). Also note that by default only =:init= can fail if the package isn't successfully installed (see ~use-package-check-before-init~); specifying =:demand=, for example, will cause an error if the package fails to install.
-
-As a workaround, I'm setting a default value for =:when= in ~use-package-defaults~ (that is used even when =:when= is explicitly specified) to prevent package configuration if package installation fails. See [[https://github.com/jwiegley/use-package/issues/693][issue 693]] and [[https://github.com/jwiegley/use-package/issues/739][issue 739]].
-
-Package configuration:
-- =:blackout= (or =:diminish= or =:delight=) for diminishing minor mode names
-- =:gfhook= for any setup configuration for a mode (e.g. set local variables or enable/disable minor modes)
-- =:config= for any basic package setup; more complicated setup should go in specific subheadings
-
-In the =:config= section, I generally put settings (~setq~ then any face configuration then ~add-hook~), then keybindings, then enabling any modes, and then any other configuration.
-*** Straight
-Install, load, and configure =straight.el=:
-#+begin_src emacs-lisp
-(setq straight-repository-branch "develop"
-      straight-enable-use-package-integration t
-      straight-check-for-modifications '(check-on-save find-when-checking)
-      straight-use-package-by-default t
-      straight-cache-autoloads t
-      straight-host-usernames '((github . "scott-astatine")
-                                (gitlab . "scott-astatine")))
-
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el"
-                         user-emacs-directory))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  ;; (benchmark 1 `(load ,bootstrap-file nil 'nomessage))
-  (load bootstrap-file nil 'nomessage))
-#+end_src
-
-*** Use-package
-Install =use-package.el= with optional dependencies and configure:
-#+begin_src emacs-lisp
-(straight-use-package 'use-package)
-
-(eval-when-compile
-  (require 'use-package)
-  (setq use-package-always-defer t))
-
-;; demote installation errors to messages
-;; this variable is no longer changed by straight
-;; (advice-add use-package-ensure-function :around #'noct-use-package-ensure)
-(when (bound-and-true-p noct-with-demoted-errors)
-  (advice-add 'straight-use-package :around #'noct-inhibit-error-advice))
-;; can test with something like this:
-;; (use-package does-not-exist)
-
-(use-package blackout
-  :straight (blackout :host github :repo "raxod502/blackout")
-  :demand t)
-#+end_src
-
-** .emacs.d Management
-
-#+begin_src emacs-lisp
-
-(use-package no-littering
-  :ensure t)
-
-(setq auto-save-file-name-transforms
-      `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
-
-#+end_src
-
 * Keybinding
 ** WhichKey
 
@@ -540,11 +546,12 @@ Install =use-package.el= with optional dependencies and configure:
   :demand t)
 
 #+end_src
-**** Sanity
+*** Sanity
 #+begin_src emacs-lisp
 (general-def 'normal
   "j" 'evil-next-visual-line
   "k" 'evil-previous-visual-line
+  "zw" '(count-words :which-key "word-count")
   "K" 'lsp-describe-thing-at-point)
 
 (general-def '(normal visual) 'override
@@ -614,10 +621,10 @@ Install =use-package.el= with optional dependencies and configure:
   "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 (spaceleader-keys
-
   "m" '(counsel-imenu :which-key "IMenu")
   "w" '(evil-window-map :which-key "Window")
   "ww" '(set-window-width :which-key "Set Width")
+  "wm" '(quit-window-and-kill :which-key "Set Width")
   "wi" '(set-window-height :which-key "Set Height")
   "a"  '(ace-select-window :which-key "Select Window")
   "qq" '(save-buffers-kill-terminal :which-key "Exit Emacs")
@@ -733,7 +740,13 @@ Install =use-package.el= with optional dependencies and configure:
 * Packages
 ** Async
 #+begin_src emacs-lisp
-(use-package async)
+
+(use-package async
+  :ensure t
+  :defer t
+  :init
+  (dired-async-mode 1))
+
 #+end_src
 
 ** All the Icons
@@ -880,6 +893,22 @@ Install =use-package.el= with optional dependencies and configure:
 (use-package tree-sitter-langs)
 
 (global-tree-sitter-mode)
+
+#+end_src
+
+** Perspective
+#+begin_src emacs-lisp
+
+(use-package perspective
+  :ensure t
+  :custom
+  (persp-mode-prefix-key (kbd "C-c p"))
+  :init
+  (setq persp-state-default-file "~/.emacs.d/.cache/perspectives")
+  (persp-mode))
+
+;; (add-hook 'kill-emacs-hook '(lambda () (persp-state-save persp-state-default-file)))
+;; (add-hook 'emacs-startup-hook '(lambda () (persp-state-load persp-state-default-file)))
 
 #+end_src
 
@@ -1117,28 +1146,28 @@ Install =use-package.el= with optional dependencies and configure:
 ** Dashboard
 #+begin_src emacs-lisp
 
-(use-package dashboard
-  :demand t
-  :init
-  (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
-  (setq dashboard-banner-logo-title "")
-  (setq dashboard-startup-banner 'logo)
-  (setq dashboard-center-content t)
-  (setq dashboard-show-shortcuts nil)
-  (setq dashboard-items '((recents  . 5)
-                          (projects . 5)))
-  (setq dashboard-set-heading-icons t)
-  (setq dashboard-set-file-icons t)
-  (setq dashboard-set-init-info t)
-  (setq dashboard-footer-icon (all-the-icons-octicon "dashboard"
-                                                     :height 1.1
-                                                     :v-adjust -0.05
-                                                     :face 'font-lock-keyword-face))
-  :config
-  (dashboard-setup-startup-hook))
+;; (use-package dashboard
+;;   :demand t
+;;   :init
+;;   (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
+;;   (setq dashboard-banner-logo-title "")
+;;   (setq dashboard-startup-banner 'logo)
+;;   (setq dashboard-center-content t)
+;;   (setq dashboard-show-shortcuts nil)
+;;   (setq dashboard-items '((recents  . 5)
+;;                           (projects . 5)))
+;;   (setq dashboard-set-heading-icons t)
+;;   (setq dashboard-set-file-icons t)
+;;   (setq dashboard-set-init-info t)
+;;   (setq dashboard-footer-icon (all-the-icons-octicon "dashboard"
+;;                                                      :height 1.1
+;;                                                      :v-adjust -0.05
+;;                                                      :face 'font-lock-keyword-face))
+;;   :config
+;;   (dashboard-setup-startup-hook))
 
-(dashboard-modify-heading-icons '((recents . "file-text")
-                                  (bookmarks . "book")))
+;; (dashboard-modify-heading-icons '((recents . "file-text")
+;;                                   (bookmarks . "book")))
 #+end_src
 
 * Development
@@ -1567,6 +1596,21 @@ Install =use-package.el= with optional dependencies and configure:
 
 
 #+end_src
+** Org Modern
+#+begin_src emacs-lisp
+(use-package org-modern
+  :hook ((org-mode                 . org-modern-mode)
+         (org-agenda-finalize-hook . org-modern-agenda))
+  :custom ((org-modern-todo t)
+           (org-modern-table nil)
+           (org-modern-list nil)
+           (org-modern-star nil)
+           (org-modern-variable-pitch nil)
+           (org-modern-block-fringe nil))
+  :commands (org-modern-mode org-modern-agenda)
+  :init (global-org-modern-mode))
+
+#+end_src
 
 ** Org Bullets
 #+begin_src emacs-lisp
@@ -1574,7 +1618,7 @@ Install =use-package.el= with optional dependencies and configure:
   :after org
   :hook (org-mode . org-bullets-mode)
   :custom
-  (org-bullets-bullet-list '("●" "🧿" "✿" "◉" "●" "◉")))
+  (org-bullets-bullet-list '("●" "○" "◈" "◉" "◇" "✳")))
 
 #+end_src
 
@@ -1693,7 +1737,6 @@ Install =use-package.el= with optional dependencies and configure:
 (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'spaceorg-babel-tangle-config)))
 
 #+end_src
-
 * Productivity
 ** Pdf Mode
 *** Setup
@@ -1707,12 +1750,10 @@ Install =use-package.el= with optional dependencies and configure:
 
   ;;; Hooks
   (add-hook 'pdf-annot-list-mode-hook #'hide-mode-line-mode)
-  (add-hook 'pdf-view-mode-hook
-            (lambda ()
-              (hide-mode-line-mode 1)
-              (hide-cursor)
-                ))
-
+  ;; (add-hook 'pdf-view-mode-hook
+  ;;           (lambda ()
+  ;;               (hide-cursor)
+                ;; ))
 
   (pdf-tools-install))
 
@@ -1720,22 +1761,22 @@ Install =use-package.el= with optional dependencies and configure:
   :demand t
   :config
   (save-place-mode 1))
-
-;; (add-hook 'window-buffer-change-functions 'my-bind-pdf-outline-to-window)
-
-
-
 #+end_src
 
 *** Keymap
 #+begin_src emacs-lisp
-(defun pdf-outl ()
+
+(defun pdf-outlf ()
   (interactive)
   (pdf-outline)
   (pdf-outline-move-to-current-page)
-  (set-window-width 50)
-  ;; (set-window-dedicated-p (selected-window) t)
-  )
+  (set-window-width 50))
+
+(defun pdf-outl ()
+  (interactive)
+  (pdf-outlf)
+  (set-window-dedicated-p (selected-window) t))
+
 
 (defun fds-pdf-outline ()
   (interactive)
@@ -1753,8 +1794,9 @@ Install =use-package.el= with optional dependencies and configure:
   (pdf-outline-quit-and-kill))
 
 (general-def 'normal 'pdf-view-mode-map
-  "o" 'pdf-outl
+  "v" 'pdf-outl
   "q" nil
+  "o" 'pdf-outlf
   "x" 'poutkill
   "a" 'hide-cursor
   "f" 'isearch-forward
@@ -1987,18 +2029,6 @@ Install =use-package.el= with optional dependencies and configure:
 #+end_src
 
 *** Keymaps
-
-** Perspective
-#+begin_src emacs-lisp
-
-(use-package perspective
-  :ensure t
-  :custom
-  (persp-mode-prefix-key (kbd "C-c p"))
-  :init
-  (persp-mode))
-
-#+end_src
 
 ** Visual Fill Col
 #+begin_src emacs-lisp

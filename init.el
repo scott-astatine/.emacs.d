@@ -41,7 +41,7 @@
                   (org-level-6 . 1.02)
                   (org-level-7 . 1.02)
                   (org-level-8 . 1.02)))
-    (set-face-attribute (car face) nil :font spacedefault-code-font :weight 'regular :height (cdr face)))
+    (set-face-attribute (car face) nil :font "Salsa" :weight 'regular :height (cdr face)))
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
@@ -51,6 +51,70 @@
   ;; (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   ;; (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
+
+;; Initialize package sources
+;; (require 'package)
+;; (eval-and-compile
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("org" . "https://orgmode.org/elpa/")
+                         ("elpa" . "https://elpa.gnu.org/packages/")))
+;; (package-initialize)
+;; (unless package-archive-contents
+;;   (package-refresh-contents))
+
+;; ;; Initialize use-package on non-Linux platforms
+;; (unless (package-installed-p 'use-package)
+;;   (package-install 'use-package))
+
+;; (require 'use-package)
+;; (setq use-package-always-ensure t))
+
+(setq straight-repository-branch "develop"
+      straight-enable-use-package-integration t
+      straight-check-for-modifications '(check-on-save find-when-checking)
+      straight-use-package-by-default t
+      straight-cache-autoloads t
+      straight-host-usernames '((github . "scott-astatine")
+                                (gitlab . "scott-astatine")))
+
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name "straight/repos/straight.el/bootstrap.el"
+                         user-emacs-directory))
+      (bootstrap-version 5))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  ;; (benchmark 1 `(load ,bootstrap-file nil 'nomessage))
+  (load bootstrap-file nil 'nomessage))
+
+(straight-use-package 'use-package)
+
+(eval-when-compile
+  (require 'use-package)
+  (setq use-package-always-defer t))
+
+;; demote installation errors to messages
+;; this variable is no longer changed by straight
+;; (advice-add use-package-ensure-function :around #'noct-use-package-ensure)
+(when (bound-and-true-p noct-with-demoted-errors)
+  (advice-add 'straight-use-package :around #'noct-inhibit-error-advice))
+;; can test with something like this:
+;; (use-package does-not-exist)
+
+(use-package blackout
+  :straight (blackout :host github :repo "raxod502/blackout")
+  :demand t)
+
+(use-package no-littering
+  :ensure t)
+
+(setq auto-save-file-name-transforms
+      `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
 
 (set-frame-parameter nil 'alpha '(100 . 100))
 ;; (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
@@ -69,8 +133,9 @@
          '(80 . 50) '(100 . 100)))))
 (toggle-transparency)
 
-(set-fringe-style 0)
-(setq window-divider-default-right-width 3)
+(set-fringe-style 1)
+(setq window-divider-default-right-width 2)
+
 (defun set-window-height (height)
   "Set the height of the current window to the specified HEIGHT."
   (interactive "nWindow height: ")
@@ -103,6 +168,12 @@
             (lambda ()
               (when (eq splitwin (selected-window))
                 (delete-window (selected-window))))))
+
+(defun quit-window-and-kill ()
+  (interactive)
+  (let ((win (selected-window)))
+    (evil-window-prev 2)
+    (quit-window t win)))
 
 (defun split-vterm (height)
   "Split vterm"
@@ -238,70 +309,6 @@
         (insert ")"))
     (message "No region selected")))
 
-;; Initialize package sources
-;; (require 'package)
-;; (eval-and-compile
-(setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("org" . "https://orgmode.org/elpa/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")))
-;; (package-initialize)
-;; (unless package-archive-contents
-;;   (package-refresh-contents))
-
-;; ;; Initialize use-package on non-Linux platforms
-;; (unless (package-installed-p 'use-package)
-;;   (package-install 'use-package))
-
-;; (require 'use-package)
-;; (setq use-package-always-ensure t))
-
-(setq straight-repository-branch "develop"
-      straight-enable-use-package-integration t
-      straight-check-for-modifications '(check-on-save find-when-checking)
-      straight-use-package-by-default t
-      straight-cache-autoloads t
-      straight-host-usernames '((github . "scott-astatine")
-                                (gitlab . "scott-astatine")))
-
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el"
-                         user-emacs-directory))
-      (bootstrap-version 5))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/raxod502/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  ;; (benchmark 1 `(load ,bootstrap-file nil 'nomessage))
-  (load bootstrap-file nil 'nomessage))
-
-(straight-use-package 'use-package)
-
-(eval-when-compile
-  (require 'use-package)
-  (setq use-package-always-defer t))
-
-;; demote installation errors to messages
-;; this variable is no longer changed by straight
-;; (advice-add use-package-ensure-function :around #'noct-use-package-ensure)
-(when (bound-and-true-p noct-with-demoted-errors)
-  (advice-add 'straight-use-package :around #'noct-inhibit-error-advice))
-;; can test with something like this:
-;; (use-package does-not-exist)
-
-(use-package blackout
-  :straight (blackout :host github :repo "raxod502/blackout")
-  :demand t)
-
-(use-package no-littering
-  :ensure t)
-
-(setq auto-save-file-name-transforms
-      `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
-
 (use-package which-key
   :init (which-key-mode)
   :diminish which-key-mode
@@ -356,6 +363,7 @@
 (general-def 'normal
   "j" 'evil-next-visual-line
   "k" 'evil-previous-visual-line
+  "zw" '(count-words :which-key "word-count")
   "K" 'lsp-describe-thing-at-point)
 
 (general-def '(normal visual) 'override
@@ -414,10 +422,10 @@
   "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 (spaceleader-keys
-
   "m" '(counsel-imenu :which-key "IMenu")
   "w" '(evil-window-map :which-key "Window")
   "ww" '(set-window-width :which-key "Set Width")
+  "wm" '(quit-window-and-kill :which-key "Set Width")
   "wi" '(set-window-height :which-key "Set Height")
   "a"  '(ace-select-window :which-key "Select Window")
   "qq" '(save-buffers-kill-terminal :which-key "Exit Emacs")
@@ -498,7 +506,11 @@
   "f" '(persp-counsel-switch-buffer :which-key "Switch Buffer")
   "d" '(kill-buffer :which-key "Find & Kill"))
 
-(use-package async)
+(use-package async
+  :ensure t
+  :defer t
+  :init
+  (dired-async-mode 1))
 
 (use-package all-the-icons
   :demand t)
@@ -591,6 +603,17 @@
 (use-package tree-sitter-langs)
 
 (global-tree-sitter-mode)
+
+(use-package perspective
+  :ensure t
+  :custom
+  (persp-mode-prefix-key (kbd "C-c p"))
+  :init
+  (setq persp-state-default-file "~/.emacs.d/.cache/perspectives")
+  (persp-mode))
+
+;; (add-hook 'kill-emacs-hook '(lambda () (persp-state-save persp-state-default-file)))
+;; (add-hook 'emacs-startup-hook '(lambda () (persp-state-load persp-state-default-file)))
 
 (use-package counsel
   :bind (("M-x" . counsel-M-x)
@@ -771,28 +794,28 @@
 ;;   ("C-<tab>" . centaur-tabs-forward)
 ;;   ("C-<iso-lefttab>" . centaur-tabs-backward))
 
-(use-package dashboard
-  :demand t
-  :init
-  (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
-  (setq dashboard-banner-logo-title "")
-  (setq dashboard-startup-banner 'logo)
-  (setq dashboard-center-content t)
-  (setq dashboard-show-shortcuts nil)
-  (setq dashboard-items '((recents  . 5)
-                          (projects . 5)))
-  (setq dashboard-set-heading-icons t)
-  (setq dashboard-set-file-icons t)
-  (setq dashboard-set-init-info t)
-  (setq dashboard-footer-icon (all-the-icons-octicon "dashboard"
-                                                     :height 1.1
-                                                     :v-adjust -0.05
-                                                     :face 'font-lock-keyword-face))
-  :config
-  (dashboard-setup-startup-hook))
+;; (use-package dashboard
+;;   :demand t
+;;   :init
+;;   (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
+;;   (setq dashboard-banner-logo-title "")
+;;   (setq dashboard-startup-banner 'logo)
+;;   (setq dashboard-center-content t)
+;;   (setq dashboard-show-shortcuts nil)
+;;   (setq dashboard-items '((recents  . 5)
+;;                           (projects . 5)))
+;;   (setq dashboard-set-heading-icons t)
+;;   (setq dashboard-set-file-icons t)
+;;   (setq dashboard-set-init-info t)
+;;   (setq dashboard-footer-icon (all-the-icons-octicon "dashboard"
+;;                                                      :height 1.1
+;;                                                      :v-adjust -0.05
+;;                                                      :face 'font-lock-keyword-face))
+;;   :config
+;;   (dashboard-setup-startup-hook))
 
-(dashboard-modify-heading-icons '((recents . "file-text")
-                                  (bookmarks . "book")))
+;; (dashboard-modify-heading-icons '((recents . "file-text")
+;;                                   (bookmarks . "book")))
 
 (defun spacelsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols)))
@@ -1106,11 +1129,23 @@
         org-log-into-drawer t)
   (spaceorg-font-setup))
 
+(use-package org-modern
+  :hook ((org-mode                 . org-modern-mode)
+         (org-agenda-finalize-hook . org-modern-agenda))
+  :custom ((org-modern-todo t)
+           (org-modern-table nil)
+           (org-modern-list nil)
+           (org-modern-star nil)
+           (org-modern-variable-pitch nil)
+           (org-modern-block-fringe nil))
+  :commands (org-modern-mode org-modern-agenda)
+  :init (global-org-modern-mode))
+
 (use-package org-bullets
   :after org
   :hook (org-mode . org-bullets-mode)
   :custom
-  (org-bullets-bullet-list '("●" "🧿" "✿" "◉" "●" "◉")))
+  (org-bullets-bullet-list '("●" "○" "◈" "◉" "◇" "✳")))
 
 (defun org-wrap-verbatim ()
   (interactive)
@@ -1220,12 +1255,10 @@
 
   ;;; Hooks
   (add-hook 'pdf-annot-list-mode-hook #'hide-mode-line-mode)
-  (add-hook 'pdf-view-mode-hook
-            (lambda ()
-              (hide-mode-line-mode 1)
-              (hide-cursor)
-                ))
-
+  ;; (add-hook 'pdf-view-mode-hook
+  ;;           (lambda ()
+  ;;               (hide-cursor)
+                ;; ))
 
   (pdf-tools-install))
 
@@ -1234,15 +1267,17 @@
   :config
   (save-place-mode 1))
 
-;; (add-hook 'window-buffer-change-functions 'my-bind-pdf-outline-to-window)
-
-(defun pdf-outl ()
+(defun pdf-outlf ()
   (interactive)
   (pdf-outline)
   (pdf-outline-move-to-current-page)
-  (set-window-width 50)
-  ;; (set-window-dedicated-p (selected-window) t)
-  )
+  (set-window-width 50))
+
+(defun pdf-outl ()
+  (interactive)
+  (pdf-outlf)
+  (set-window-dedicated-p (selected-window) t))
+
 
 (defun fds-pdf-outline ()
   (interactive)
@@ -1260,8 +1295,9 @@
   (pdf-outline-quit-and-kill))
 
 (general-def 'normal 'pdf-view-mode-map
-  "o" 'pdf-outl
+  "v" 'pdf-outl
   "q" nil
+  "o" 'pdf-outlf
   "x" 'poutkill
   "a" 'hide-cursor
   "f" 'isearch-forward
@@ -1462,13 +1498,6 @@
   ;; minimal rendering by default
   (setq-default shr-inhibit-images t)   ; toggle with `I`
   (setq-default shr-use-fonts nil))
-
-(use-package perspective
-  :ensure t
-  :custom
-  (persp-mode-prefix-key (kbd "C-c p"))
-  :init
-  (persp-mode))
 
 (defun spaceorg-mode-visual-fill()
   (setq visual-fill-column-width 150
