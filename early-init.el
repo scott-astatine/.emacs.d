@@ -8,17 +8,6 @@
       package-native-compile t
       package-enable-at-startup nil)
 
-(scroll-bar-mode -1)
-(tool-bar-mode -1)
-(tooltip-mode -1)
-(set-fringe-mode 1)
-(menu-bar-mode -1)
-(column-number-mode)
-(global-display-line-numbers-mode t)
-(menu-bar--display-line-numbers-mode-relative)
-;; Set up the visible bell
-(setq visible-bell t)
-
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 

@@ -2,27 +2,37 @@
       scroll-margin 2
       large-file-warning-threshold nil
       pixel-scroll-precision-large-scroll-height 40.0
-      url-history-file (expand-file-name "url/history" user-emacs-directory))
-
+      url-history-file (expand-file-name "url/history" user-emacs-directory)
+      visible-bell t)
 
 (load-file "~/.emacs.d/hide-mode-line.el")
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
+(scroll-bar-mode -1)
+(tool-bar-mode -1)
+(tooltip-mode -1)
+(set-fringe-mode 1)
+(menu-bar-mode -1)
+(column-number-mode)
+(global-display-line-numbers-mode t)
+(menu-bar--display-line-numbers-mode-relative)
 (hl-line-mode t)
 (set-face-background 'hl-line "#4f4f4f")
 (blink-cursor-mode 0)
+(recentf-mode 1)
 
 (add-to-list 'native-comp-eln-load-path (expand-file-name "eln-cache/" user-emacs-directory))
 
-(defvar spacedefault-font-size 105)
-(defvar spacedefault-code-font "JetBrains Mono")
+(defvar endless-font-size 100)
+(defvar endless-code-font "JetBrains Mono")
+(defvar endless-variable-pitch-font "Salsa")
 
-(set-face-attribute 'default nil :font spacedefault-code-font :height spacedefault-font-size)
-(set-face-attribute 'fixed-pitch nil :font spacedefault-code-font :height spacedefault-font-size :weight 'regular)
+(set-face-attribute 'default nil :font endless-code-font :height 100)
+(set-face-attribute 'fixed-pitch nil :font endless-code-font :height 110 :weight 'regular)
 
 ;;; Previous Font "Leckerli One" Princess Sofia
-(set-face-attribute 'variable-pitch nil :font "Salsa" :height 165 :weight 'regular)
+(set-face-attribute 'variable-pitch nil :font endless-variable-pitch-font :height 165 :weight 'regular)
 
 (variable-pitch-mode t)
 
@@ -30,10 +40,11 @@
 
 (defun spaceorg-font-setup ()
   ;; Replace list hyphen with dot
+  (interactive)
   (font-lock-add-keywords 'org-mode
                           '(("^ *\\([-]\\) "
                              (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
-  (dolist (face '((org-level-1 . 1.3)
+  (dolist (face '((org-level-1 . 1.6)
                   (org-level-2 . 1.14)
                   (org-level-3 . 1.07)
                   (org-level-4 . 1.04)
@@ -41,33 +52,21 @@
                   (org-level-6 . 1.02)
                   (org-level-7 . 1.02)
                   (org-level-8 . 1.02)))
-    (set-face-attribute (car face) nil :font "Salsa" :weight 'regular :height (cdr face)))
+    (set-face-attribute (car face) nil :font endless-variable-pitch-font :weight 'regular :height (cdr face)))
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-code nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
   ;; (set-face-attribute 'org-verbatim nil :inherit 'fixed-pitch)
-  ;; (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-  ;; (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
 
 ;; Initialize package sources
-;; (require 'package)
-;; (eval-and-compile
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
                          ("org" . "https://orgmode.org/elpa/")
                          ("elpa" . "https://elpa.gnu.org/packages/")))
-;; (package-initialize)
-;; (unless package-archive-contents
-;;   (package-refresh-contents))
-
-;; ;; Initialize use-package on non-Linux platforms
-;; (unless (package-installed-p 'use-package)
-;;   (package-install 'use-package))
-
-;; (require 'use-package)
-;; (setq use-package-always-ensure t))
 
 (setq straight-repository-branch "develop"
       straight-enable-use-package-integration t
@@ -101,8 +100,8 @@
 ;; demote installation errors to messages
 ;; this variable is no longer changed by straight
 ;; (advice-add use-package-ensure-function :around #'noct-use-package-ensure)
-(when (bound-and-true-p noct-with-demoted-errors)
-  (advice-add 'straight-use-package :around #'noct-inhibit-error-advice))
+;; (when (bound-and-true-p noct-with-demoted-errors)
+;;   (advice-add 'straight-use-package :around #'noct-inhibit-error-advice))
 ;; can test with something like this:
 ;; (use-package does-not-exist)
 
@@ -130,7 +129,7 @@
                     ;; Also handle undocumented (<active> <inactive>) form.
                     ((numberp (cadr alpha)) (cadr alpha)))
               100)
-         '(80 . 50) '(100 . 100)))))
+         '(90 . 50) '(100 . 100)))))
 (toggle-transparency)
 
 (set-fringe-style 1)
@@ -146,7 +145,7 @@
 (defun set-window-width (width)
   "Set the width of the current window to WIDTH."
   (interactive "nNew window width: ")
-   (if (> width (window-width))
+  (if (> width (window-width))
       (enlarge-window-horizontally (- width (window-width)))
     (shrink-window-horizontally (- (window-width) width))))
 
@@ -171,9 +170,8 @@
 
 (defun quit-window-and-kill ()
   (interactive)
-  (let ((win (selected-window)))
-    (evil-window-prev 2)
-    (quit-window t win)))
+  (kill-this-buffer)
+  (delete-window))
 
 (defun split-vterm (height)
   "Split vterm"
@@ -335,8 +333,8 @@
 (use-package evil-collection
   :after evil
   :demand t
-  :custom
-  (evil-collection-setup-minibuffer t)
+  ;; :custom
+  ;; (evil-collection-setup-minibuffer t)
   :config
   (evil-collection-init))
 
@@ -366,6 +364,10 @@
   "zw" '(count-words :which-key "word-count")
   "K" 'lsp-describe-thing-at-point)
 
+(defun ex-M ()
+  (interactive)
+  (execute-extended-command nil))
+
 (general-def '(normal visual) 'override
   "L" 'next-buffer
   "H" 'previous-buffer
@@ -375,22 +377,18 @@
   "B" 'evil-beginning-of-line
   "P" 'evil-jump-item
   "g/" 'evilnc-comment-or-uncomment-lines
-  ";" 'counsel-M-x
-
+  ";" 'ex-M
   )
 
 
 ;;; CTRL Maps
 
 (general-def '(normal insert) 'override
-  "C-<tab>" 'persp-counsel-switch-buffer
-  "C-n" 'persp-next
-  "C-p" 'persp-prev
+  "C-<tab>" 'consult-buffer
   "C-w" 'evil-window-map
+  "C-o" 'toggle-transparency
   "C-k" 'evil-scroll-line-up
   "C-j" 'evil-scroll-line-down
-  "C-o" 'toggle-transparency
-  "C-S-o" 'persp-switch
   "C-," 'evil-window-increase-width
   "C-." 'evil-window-decrease-width)
 
@@ -422,7 +420,8 @@
   "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 (spaceleader-keys
-  "m" '(counsel-imenu :which-key "IMenu")
+  "m" '(consult-imenu :which-key "IMenu")
+
   "w" '(evil-window-map :which-key "Window")
   "ww" '(set-window-width :which-key "Set Width")
   "wm" '(quit-window-and-kill :which-key "Set Width")
@@ -434,14 +433,8 @@
   "e" '(treemacs-select-window :which-key "Treemacs Toggle"))
 
 (spaceleader-keys
-  :prefix "SPC s"
-  "s"'(swiper :which-key "Search...")
-  "t"'(gts-do-translate :which-key "Translate")
-  "d"'(dictionary-search :which-key "Search word..."))
-
-(spaceleader-keys
   :prefix "SPC t"
-  "t" '(counsel-load-theme :which-key "choose theme")
+  "t" '(consult-theme :which-key "choose theme")
   "c" '(display-time-mode :which-key "Display Time")
   "s" '(hydra-text-scale/body :which-key "scale text")
   "w" '(toggle-transparency :which-key "scale text")
@@ -455,9 +448,15 @@
   :prefix "SPC f"
   "s" '(save-buffer :which-key "Save Buffer")
   "e" '(rename-file :which-key "Rename File")
-  "o" '(counsel-find-file :which-key "Open File")
+  "o" '(find-file :which-key "Open File")
   "f" '(projectile-find-file :which-key "Find file in project")
-  "r" '(counsel-recentf :which-key "Open Recent File"))
+  "r" '(consult-recent-file :which-key "Open Recent File"))
+
+(spaceleader-keys
+  :prefix "SPC s"
+  ;; "s"'(swiper :which-key "Search...")
+  "t"'(gts-do-translate :which-key "Translate")
+  "d"'(dictionary-search :which-key "Search word..."))
 
 (spaceleader-keys
   :prefix "SPC c"
@@ -480,8 +479,8 @@
 
 (spaceleader-keys
   :prefix "SPC h"
-  "f" '(counsel-describe-function :which-key "Describe Function")
-  "v" '(counsel-describe-variable :which-key "Describe Variable"))
+  "f" '(describe-function :which-key "Describe Function")
+  "v" '(describe-variable :which-key "Describe Variable"))
 
 (defun mtt ()
   (interactive)
@@ -496,14 +495,14 @@
   "c" '((lambda () (interactive) (find-file "~/.emacs.d/Config.org")) :which-key "Open Config")
   "r" '(split-repl :which-key "Elisp REPL")
   "b" '(eww :which-key "eww")
-  "s" '(persp-switch-to-scratch-buffer :which-key "Open Scratch buffer")
+  ;; "s" '(persp-switch-to-scratch-buffer :which-key "Open Scratch buffer")
   "e" '(eshell :which-key "Eshell"))
 
 (spaceleader-keys
   :prefix "SPC b"
   "l" '(evil-switch-to-windows-last-buffer :which-key "Kill Buffer")
   "k" '(kill-this-buffer :which-key "Kill Buffer")
-  "f" '(persp-counsel-switch-buffer :which-key "Switch Buffer")
+  "f" '(switch-to-buffer :which-key "Switch Buffer")
   "d" '(kill-buffer :which-key "Find & Kill"))
 
 (use-package async
@@ -514,24 +513,32 @@
 
 (use-package all-the-icons
   :demand t)
+(use-package all-the-icons-dired
+  :demand t)
 
-(use-package projectile
+(use-package all-the-icons-completion
+  :after (marginalia all-the-icons)
+  :hook (marginalia-mode . all-the-icons-completion-marginalia-setup)
   :init
-  (when (file-directory-p "~/Projects")
-    (setq projectile-project-search-path '("~/Projects")))
-  (setq projectile-switch-project-action #'projectile-dired)
+  (all-the-icons-completion-mode))
 
-  :config
-  (setq projectile-completion-system 'ivy)
-  (projectile-mode +1))
+;; (use-package projectile
+;;   :init
+;;   (when (file-directory-p "~/Projects")
+;;     (setq projectile-project-search-path '("~/Projects")))
+;;   (setq projectile-switch-project-action #'projectile-dired)
 
-(spaceleader-keys
-  :prefix "SPC p"
-  "r" '(run-current-project :which-key "Run Project")
-  "e" '(treemacs-projectile :which-key "Treemacs Projectile")
-  "o" '(counsel-projectile-switch-project :which-key "Open Project")
-  "d" '(projectile-remove-known-project :which-key "Add Project")
-  "a" '(projectile-add-known-project :which-key "Add Project"))
+;;   :config
+;;   ;; (setq projectile-completion-system 'vertico)
+;;   (projectile-mode +1))
+
+;; (spaceleader-keys
+;;   :prefix "SPC p"
+;;   "r" '(run-current-project :which-key "Run Project")
+;;   "e" '(treemacs-projectile :which-key "Treemacs Projectile")
+;;   "o" '(projectile-switch-project :which-key "Open Project")
+;;   "d" '(projectile-remove-known-project :which-key "Add Project")
+;;   "a" '(projectile-add-known-project :which-key "Add Project"))
 
 (use-package magit
   :custom
@@ -594,93 +601,330 @@
          :engines (list (gts-google-engine))
          :render (gts-buffer-render))))
 
-(use-package beacon
-  :ensure t
+;; (use-package beacon
+;;   :ensure t
+;;   :init
+;;   (beacon-mode 1))
+
+(use-package emacs
   :init
-  (beacon-mode 1))
+  ;; Add prompt indicator to `completing-read-multiple'.
+  ;; We display [CRM<separator>], e.g., [CRM,] if the separator is a comma.
+  (defun crm-indicator (args)
+    (cons (format "[CRM%s] %s"
+                  (replace-regexp-in-string
+                   "\\`\\[.*?]\\*\\|\\[.*?]\\*\\'" ""
+                   crm-separator)
+                  (car args))
+          (cdr args)))
+  (advice-add #'completing-read-multiple :filter-args #'crm-indicator)
+
+  ;; Do not allow the cursor in the minibuffer prompt
+  (setq minibuffer-prompt-properties
+        '(read-only t cursor-intangible t face minibuffer-prompt))
+  (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+
+  ;; Emacs 28: Hide commands in M-x which do not work in the current mode.
+  ;; Vertico commands are hidden in normal buffers.
+  ;; (setq read-extended-command-predicate
+  ;;       #'command-completion-default-include-p)
+
+  ;; Enable recursive minibuffers
+  (setq enable-recursive-minibuffers t)
+
+  (setq completion-cycle-threshold 3)
+  ;; Enable indentation+completion using the TAB key.
+  ;; `completion-at-point' is often bound to M-TAB.
+  (setq tab-always-indent 'complete))
 
 (use-package tree-sitter)
 (use-package tree-sitter-langs)
 
 (global-tree-sitter-mode)
 
-(use-package perspective
+(use-package persp-mode
   :ensure t
   :custom
-  (persp-mode-prefix-key (kbd "C-c p"))
+  (persp-keymap-prefix (kbd "C-a"))
   :init
-  (setq persp-state-default-file "~/.emacs.d/.cache/perspectives")
   (persp-mode))
 
 ;; (add-hook 'kill-emacs-hook '(lambda () (persp-state-save persp-state-default-file)))
-;; (add-hook 'emacs-startup-hook '(lambda () (persp-state-load persp-state-default-file)))
 
-(use-package counsel
-  :bind (("M-x" . counsel-M-x)
-         ("C-x b" . counsel-ibuffer)
-         ("C-x C-f" . counsel-find-file)
-         :map minibuffer-local-map
-         ("C-r" . 'counsel-minibuffer-history))
+(general-def '(normal visual insert) 'override
+  "C-p" 'persp-switch
+  "C-a o" nil
+  "C-9" 'persp-next
+  "C-8" 'persp-prev)
+
+(use-package dabbrev
   :config
-  (setq ivy-initial-inputs-alist nil
-        counsel-describe-variable-function #'helpful-variable
-        counsel-descbinds-function #'helpful-funciton)
+  (setq dabbrev-check-all-buffers t)
+  :bind (("M-/" . dabbrev-completion)
+         ("C-M-/" . dabbrev-expand))
+  :custom
+  (dabbrev-ignored-buffer-regexps '("\\.\\(?:pdf\\|jpe?g\\|png\\)\\'")))
+(setq ispell-program-name "ispell"
+      ispell-dictionary "english")
+
+(use-package corfu
+  :hook (lsp-completion-mode . kb/corfu-setup-lsp) ; Use corfu for lsp completion
+  :general
+  (:keymaps 'corfu-map
+            :states 'insert
+            "C-n" #'corfu-next
+            "C-p" #'corfu-previous
+            "TAB"  #'corfu-next
+            [tab]  #'corfu-next
+            "S-TAB"  #'corfu-next
+            [backtab]  #'corfu-next
+
+            "<escape>" #'corfu-quit
+            "<return>" #'corfu-insert
+            "H-SPC" #'corfu-insert-separator
+            ;; "SPC" #'corfu-insert-separator ; Use when `corfu-quit-at-boundary' is non-nil
+            "M-d" #'corfu-show-documentation
+            "C-g" #'corfu-quit
+            "M-l" #'corfu-show-location)
+  :custom
+  ;; Works with `indent-for-tab-command'. Make sure tab doesn't indent when you
+  ;; want to perform completion
+  (tab-always-indent 'complete)
+  (completion-cycle-threshold nil)      ; Always show candidates in menu
+
+  (corfu-auto nil)
+  (corfu-auto-prefix 2)
+  (corfu-auto-delay 0.25)
+
+  (corfu-min-width 80)
+  (corfu-max-width corfu-min-width)     ; Always have the same width
+  (corfu-count 14)
+  (corfu-scroll-margin 4)
+  (corfu-cycle nil)
+
+  ;; `nil' means to ignore `corfu-separator' behavior, that is, use the older
+  ;; `corfu-quit-at-boundary' = nil behavior. Set this to separator if using
+  ;; `corfu-auto' = `t' workflow (in that case, make sure you also set up
+  ;; `corfu-separator' and a keybind for `corfu-insert-separator', which my
+  ;; configuration already has pre-prepared). Necessary for manual corfu usage with
+  ;; orderless, otherwise first component is ignored, unless `corfu-separator'
+  ;; is inserted.
+  (corfu-quit-at-boundary nil)
+  (corfu-separator ?\s)            ; Use space
+  (corfu-quit-no-match 'separator) ; Don't quit if there is `corfu-separator' inserted
+  (corfu-preview-current 'insert)  ; Preview first candidate. Insert on input if only one
+  (corfu-preselect-first t)        ; Preselect first candidate?
+
+  ;; Other
+  (corfu-echo-documentation nil)        ; Already use corfu-doc
+  (lsp-completion-provider :none)       ; Use corfu instead for lsp completions
   :init
-  (counsel-mode))
-
-(use-package counsel-projectile
+  (global-corfu-mode)
   :config
-  (counsel-projectile-mode 1))
+  ;; NOTE 2022-03-01: This allows for a more evil-esque way to have
+  ;; `corfu-insert-separator' work with space in insert mode without resorting to
+  ;; overriding keybindings with `general-override-mode-map'. See
+  ;; https://github.com/minad/corfu/issues/12#issuecomment-869037519
+  ;; Alternatively, add advice without `general.el':
+  ;; (advice-add 'corfu--setup :after 'evil-normalize-keymaps)
+  ;; (advice-add 'corfu--teardown :after 'evil-normalize-keymaps)
+  (general-add-advice '(corfu--setup corfu--teardown) :after 'evil-normalize-keymaps)
+  (evil-make-overriding-map corfu-map)
 
-(use-package ivy
-    :diminish
-    :bind (
-        :map ivy-minibuffer-map
-        ("RET" . ivy-alt-done)
-        ("C-l" . ivy-alt-done)
-        ("TAB" . ivy-next-line)
-        ("C-j" . ivy-next-line)
-        ("<backtab>" . ivy-previous-line)
-        ("C-k" . ivy-previous-line)
-        :map ivy-switch-buffer-map
-        ("C-k" . ivy-previous-line)
-        ("C-l" . ivy-done)
-        ("C-d" . ivy-switch-buffer-kill)
-        :map ivy-reverse-i-search-map
-        ("C-k" . ivy-previous-line)
-        ("C-d" . ivy-reverse-i-search-kill))
-    :config
-    (ivy-mode 1))
+  ;; Enable Corfu more generally for every minibuffer, as long as no other
+  ;; completion UI is active. If you use Mct or Vertico as your main minibuffer
+  ;; completion UI. From
+  ;; https://github.com/minad/corfu#completing-with-corfu-in-the-minibuffer
+  (defun corfu-enable-always-in-minibuffer ()
+    "Enable Corfu in the minibuffer if Vertico/Mct are not active."
+    (unless (or (bound-and-true-p mct--active) ; Useful if I ever use MCT
+                (bound-and-true-p vertico--input))
+      (setq-local corfu-auto nil)       ; Ensure auto completion is disabled
+      (corfu-mode 1)))
+  (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
 
-(use-package ivy-rich
-    :init
-    (ivy-rich-mode 1))
+  ;; Setup lsp to use corfu for lsp completion
+  (defun kb/corfu-setup-lsp ()
+    "Use orderless completion style with lsp-capf instead of the
+default lsp-passthrough."
+    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+          '(orderless))))
 
-(use-package all-the-icons-ivy-rich
-  :init 
-  (all-the-icons-ivy-rich-mode 1)
+(use-package orderless
+  :init
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles . (partial-completion))))))
+
+(use-package kind-icon
+  :after corfu
+  :custom
+  (kind-icon-use-icons t)
+  (kind-icon-default-face 'corfu-default) ; Have background color be the same as `corfu' face background
+  (kind-icon-blend-background nil)  ; Use midpoint color between foreground and background colors ("blended")?
+  (kind-icon-blend-frac 0.08)
+
+  ;; NOTE 2022-02-05: `kind-icon' depends `svg-lib' which creates a cache
+  ;; directory that defaults to the `user-emacs-directory'. Here, I change that
+  ;; directory to a location appropriate to `no-littering' conventions, a
+  ;; package which moves directories of other packages to sane locations.
+  (svg-lib-icons-dir (no-littering-expand-var-file-name "svg-lib/cache/")) ; Change cache dir
   :config
-  (setq all-the-icons-ivy-rich-icon t
-        all-the-icons-ivy-rich-color-icon t
-        all-the-icons-ivy-rich-icon-size 1.0
-        all-the-icons-ivy-rich-project t
-        all-the-icons-ivy-rich-field-width 80
-        inhibit-compacting-font-caches t))
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter) ; Enable `kind-icon'
 
-;; Whether display the icons
+  ;; Add hook to reset cache so the icon colors match my theme
+  ;; NOTE 2022-02-05: This is a hook which resets the cache whenever I switch
+  ;; the theme using my custom defined command for switching themes. If I don't
+  ;; do this, then the backgound color will remain the same, meaning it will not
+  ;; match the background color corresponding to the current theme. Important
+  ;; since I have a light theme and dark theme I switch between. This has no
+  ;; function unless you use something similar
+  (add-hook 'kb/themes-hooks #'(lambda () (interactive) (kind-icon-reset-cache))))
 
-(use-package ivy-posframe
+(use-package vertico
+  :demand t                             ; Otherwise won't get loaded immediately
+  :straight (vertico :files (:defaults "extensions/*") ; Special recipe to load extensions conveniently
+                     :includes (vertico-indexed
+                                vertico-flat
+                                vertico-grid
+                                vertico-mouse
+                                vertico-quick
+                                vertico-buffer
+                                vertico-repeat
+                                vertico-reverse
+                                vertico-directory
+                                vertico-multiform
+                                vertico-unobtrusive
+                                ))
+  :general
+  (:keymaps '(normal insert visual motion)
+            "M-." #'vertico-repeat
+            )
+  (:keymaps 'vertico-map
+            "<tab>"  #'vertico-next
+            "<backtab>"  #'vertico-previous
+            "?" #'minibuffer-completion-help
+            "C-M-n" #'vertico-next-group
+            "C-M-p" #'vertico-previous-group
+            ;; Multiform toggles
+            "<backspace>" #'vertico-directory-delete-char
+            "C-w" #'vertico-directory-delete-word
+            "C-<backspace>" #'vertico-directory-delete-word
+            "RET" #'vertico-directory-enter
+            "C-i" #'vertico-quick-insert
+            "C-o" #'vertico-quick-exit
+            "M-G" #'vertico-multiform-grid
+            "M-F" #'vertico-multiform-flat
+            "M-R" #'vertico-multiform-reverse
+            "M-U" #'vertico-multiform-unobtrusive
+            )
+  :hook ((rfn-eshadow-update-overlay . vertico-directory-tidy) ; Clean up file path when typing
+         (minibuffer-setup . vertico-repeat-save) ; Make sure vertico state is saved
+         )
+  :custom
+  (vertico-count 13)
+  (vertico-resize t)
+  (vertico-cycle nil)
+  ;; Extensions
+  (vertico-grid-separator "       ")
+  (vertico-grid-lookahead 50)
+  (vertico-buffer-display-action '(display-buffer-reuse-window))
+  (vertico-multiform-categories
+   '((file reverse)
+     (consult-grep buffer)
+     (consult-location)
+     (imenu buffer)
+     (library reverse indexed)
+     (org-roam-node reverse indexed)
+     (t reverse)
+     ))
+  (vertico-multiform-commands
+   '(("flyspell-correct-*" grid reverse)
+     (org-refile grid reverse indexed)
+     (consult-yank-pop indexed)
+     (consult-flycheck)
+     (consult-lsp-diagnostics)
+     ))
+  :init
+  (defun kb/vertico-multiform-flat-toggle ()
+    "Toggle between flat and reverse."
+    (interactive)
+    (vertico-multiform--display-toggle 'vertico-flat-mode)
+    (if vertico-flat-mode
+        (vertico-multiform--temporary-mode 'vertico-reverse-mode -1)
+      (vertico-multiform--temporary-mode 'vertico-reverse-mode 1)))
+
+  ;; Workaround for problem with `tramp' hostname completions. This overrides
+  ;; the completion style specifically for remote files! See
+  ;; https://github.com/minad/vertico#tramp-hostname-completion
+  (defun kb/basic-remote-try-completion (string table pred point)
+    (and (vertico--remote-p string)
+         (completion-basic-try-completion string table pred point)))
+  (defun kb/basic-remote-all-completions (string table pred point)
+    (and (vertico--remote-p string)
+         (completion-basic-all-completions string table pred point)))
+  (add-to-list 'completion-styles-alist
+               '(basic-remote           ; Name of `completion-style'
+                 kb/basic-remote-try-completion kb/basic-remote-all-completions nil))
+  :config
+  (vertico-mode)
+  ;; Extensions
+  (vertico-multiform-mode)
+
+  ;; Prefix the current candidate with “» ”. From
+  ;; https://github.com/minad/vertico/wiki#prefix-current-candidate-with-arrow
+  (advice-add #'vertico--format-candidate :around
+              (lambda (orig cand prefix suffix index _start)
+                (setq cand (funcall orig cand prefix suffix index _start))
+                (concat
+                 (if (= vertico--index index)
+                     (propertize "🔪 " 'face 'vertico-current)
+                   "  ")
+                 cand)))
+  )
+
+(use-package savehist
+  :init
+  (savehist-mode 1))
+
+(defun dw/get-project-root ()
+  (when (fboundp 'projectile-project-root)
+    (projectile-project-root)))
+
+(use-package consult
+  :straight t
   :demand t
+  :bind (("C-s" . consult-line)
+         ("C-M-l" . consult-imenu)
+         ("C-M-j" . persp-switch-to-buffer*)
+         :map minibuffer-local-map
+         ("C-r" . consult-history))
+  :custom
+  (consult-project-root-function #'dw/get-project-root)
+  (completion-in-region-function #'consult-completion-in-region))
+
+(use-package marginalia
+  :after vertico
+  :ensure t
+  :custom
+  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
   :init
-  (ivy-posframe-mode 1)
-  :config
-  (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-frame-top-center))
-        ivy-posframe-min-width 130
-        ivy-posframe-border-width 3
-        ivy-posframe-max-height 60
-        ivy-posframe-height 10
-        ivy-posframe-mode t
-        ivy-posframe-max-width 220))
+  (marginalia-mode))
+
+(use-package vertico-posframe
+  :init
+  (setq vertico-multiform-commands
+        '((consult-line
+           posframe
+           (vertico-posframe-poshandler . posframe-poshandler-frame-top-center)
+           (vertico-posframe-border-width . 10)
+           ;; NOTE: This is useful when emacs is used in both in X and
+           ;; terminal, for posframe do not work well in terminal, so
+           ;; vertico-buffer-mode will be used as fallback at the
+           ;; moment.
+           (vertico-posframe-fallback-mode . vertico-buffer-mode))
+          (t posframe)))
+  (vertico-posframe-mode 1))
 
 (use-package treemacs
   :demand t
@@ -736,10 +980,11 @@
 (use-package doom-modeline
   :demand t
   :init
-  (setq doom-modeline-height 27
+  (setq doom-modeline-height 24
         display-time-format " %H:%M:%S "
         display-time-interval 1
         doom-modeline-buffer-encoding nil)
+  (display-time-mode 1)
   (doom-modeline-mode 1))
 (doom-modeline-def-modeline 'main
   '(bar window-number modals
@@ -759,17 +1004,14 @@
 
 (add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
 
-    (use-package rainbow-delimiters
-      :hook (prog-mode . rainbow-delimiters-mode))
+(use-package rainbow-delimiters
+  :hook (prog-mode . rainbow-delimiters-mode))
 
 (use-package helpful
-    :custom
-    (counsel-describe-function-function #'helpful-callable)
-    (counsel-describe-variable-funciton #'helpful-variable)
     :bind
-    ([remap describe-function] . counsel-describe-function)
+    ([remap describe-function] . helpful-function)
     ([remap describe-command] . helpful-command)
-    ([remap describe-variable] . counsel-describe-variable)
+    ([remap describe-variable] . helpful-variable)
     ([remap describe-key] . helpful-key))
 
 ;; (use-package centaur-tabs
@@ -843,14 +1085,14 @@
         lsp-ui-doc-show-with-cursor t
         lsp-ui-doc-show-with-mouse t))
 
-(use-package lsp-ivy)
+;; (use-package lsp-ivy)
 
 (use-package dap-mode
   ;; Uncomment the config below if you want all UI panes to be hidden by default!
-  ;; :custom
-  ;; (lsp-enable-dap-auto-configure nil)
-  ;; :config
-  ;; (dap-ui-mode 1)
+  :custom
+  (lsp-enable-dap-auto-configure nil)
+  :config
+  (dap-ui-mode 1)
   :config
   ;; Set up Node debugging
   (require 'dap-node)
@@ -864,26 +1106,6 @@
 
 (use-package lsp-treemacs
     :after lsp)
-
-(use-package company
-  :config
-  (setq ispell-dictonary "en_US"
-	company-ispell-dictonary ispell-dictonary)
-  :bind
-  (:map company-active-map
-        ("<tab>" . company-complete-common-or-cycle)
-        ("<backtab>" . company-select-previous)
-        ("C-j" . company-complete-common-or-cycle)
-        ("C-p" . company-select-previous))
-  :custom
-  (company-minimum-prefix-length 1)
-  (add-to-list 'company-backends 'company-ispell)
-  (company-idle-delay 0.0))
-
-(global-company-mode)
-
-(use-package company-box
-  :hook (company-mode . company-box-mode))
 
 (use-package flycheck
     :ensure t
@@ -990,13 +1212,13 @@
 (use-package auctex
   :ensure t)
 
-(use-package company-auctex
-  :ensure t
-  :config
-  (company-auctex-init))
+;; (use-package company-auctex
+;;   :ensure t
+;;   :config
+;;   (company-auctex-init))
 
-(with-eval-after-load 'company
-  (add-to-list 'company-backends 'company-auctex))
+;; (with-eval-after-load 'company
+;;   (add-to-list 'company-backends 'company-auctex))
 
 (defun latex-comp ()
   (interactive)
@@ -1104,8 +1326,6 @@
   :after yasnippet
   :straight (doom-snippets :type git :host github :repo "hlissner/doom-snippets" :files ("*.el" "*")))
 
-
-
 (defun spaceorg-mode-setup ()
   (setq org-src-tab-acts-natively     t
         org-src-tab-acts-natively     t
@@ -1177,6 +1397,7 @@
   :states '(visual normal)
   "r" '(org-run-code-block :which-key "Run Code block")
   "c" '(org-wrap-code :which-key "Wrap Code")
+  "o" '(consult-org-heading :which-key "Outline")
   "b" '(org-wrap-bold :which-key "Wrap Bold")
   "i" '(org-wrap-italics :which-key "Wrap italics")
   "x" '(org-wrap-strike :which-key "Stike Seletion")
@@ -1255,10 +1476,6 @@
 
   ;;; Hooks
   (add-hook 'pdf-annot-list-mode-hook #'hide-mode-line-mode)
-  ;; (add-hook 'pdf-view-mode-hook
-  ;;           (lambda ()
-  ;;               (hide-cursor)
-                ;; ))
 
   (pdf-tools-install))
 
@@ -1294,21 +1511,32 @@
   (pdf-outline)
   (pdf-outline-quit-and-kill))
 
+(setq pdf-annot-minor-mode-map-prefix "a")
+
 (general-def 'normal 'pdf-view-mode-map
-  "v" 'pdf-outl
   "q" nil
-  "o" 'pdf-outlf
-  "x" 'poutkill
-  "a" 'hide-cursor
+  "c" 'pdf-view-center-in-window
+  "d" 'pdf-view-scroll-up-or-next-page
   "f" 'isearch-forward
+  "i" 'pdf-view-midnight-minor-mode
+  "I" 'pdf-view-themed-minor-mode
+  "J" 'pdf-view-next-page
+  "K" 'pdf-view-previous-page
+  "o" 'pdf-outlf
+
+  "ah" 'pdf-annot-add-highlight-markup-annotation
+  "ax" 'pdf-annot-add-strikeout-markup-annotation
+  "au" 'pdf-annot-add-underline-markup-annotation
+  "au" 'pdf-annot-add-squiggly-markup-annotation
+  "ac" 'pdf-annot-add-markup-annotation
+  "at" 'pdf-annot-add-text-annotation
+  "al" 'pdf-annot-list-annotations
+
+  "v" 'pdf-outl
   "r" 'image-rotate
   "u" 'pdf-view-scroll-down-or-previous-page
-  "d" 'pdf-view-scroll-up-or-next-page
-  "J" 'pdf-view-next-page
   "w" 'pdf-view-fit-width-to-window
-  "K" 'pdf-view-previous-page
-  "c" 'pdf-view-center-in-window
-  "i" 'pdf-view-midnight-minor-mode)
+  "x" 'poutkill)
 
 
 (general-def 'normal 'pdf-outline-buffer-mode-map
@@ -1317,6 +1545,7 @@
   "q" 'pdf-outline-quit-and-kill
   "a" 'pdf-outline-select-pdf-window
   "d" 'pdf-outline-display-link
+  "e" 'pdf-outline-toggle-subtree
   "s" 'pdf-outline-follow-mode)
 
 (general-def 'normal 'doc-view-mode-map
@@ -1437,7 +1666,6 @@
 
 ;; (spaceleader-keys
 ;;   :prefix "SPC k" 
-;;   "m" '(counsel-major :which-key "Major modes")
 ;;   "n" '(emms-next :which-key "Next")
 ;;   "s" '(emms-stop :which-key "Next")
 ;;   "h" '(emms-seek-backward :which-key "Seek backward")
