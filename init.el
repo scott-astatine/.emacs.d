@@ -1,3 +1,5 @@
+(add-to-list 'native-comp-eln-load-path (expand-file-name "eln-cache/" user-emacs-directory))
+
 (setq scroll-step 1
       scroll-margin 2
       large-file-warning-threshold nil
@@ -17,26 +19,30 @@
 (column-number-mode)
 (global-display-line-numbers-mode t)
 (menu-bar--display-line-numbers-mode-relative)
-(hl-line-mode t)
-(set-face-background 'hl-line "#4f4f4f")
-(blink-cursor-mode 0)
+;; (global-hl-line-mode 1)
+;; (set-face-background 'hl-line "#4f4f4f")
+(blink-cursor-mode 1)
 (recentf-mode 1)
+(recentf-load-list)
 
-(add-to-list 'native-comp-eln-load-path (expand-file-name "eln-cache/" user-emacs-directory))
+(progn
+  (defvar endless-font-size 120)
+  (defvar endless-code-font "JetBrains Mono")
+    ;;; Previous Font "Leckerli One" Princess Sofia
+  (defvar endless-variable-pitch-font "Merriweather")
 
-(defvar endless-font-size 100)
-(defvar endless-code-font "JetBrains Mono")
-(defvar endless-variable-pitch-font "Salsa")
+  (set-face-attribute 'default nil
+		      :font endless-code-font
+		      :height endless-font-size
+		      :weight 'normal)
+  (set-face-attribute 'fixed-pitch nil
+		      :font endless-code-font
+		      :height (- endless-font-size 6)
+		      :weight 'medium :slant 'normal)
+  (set-face-attribute 'variable-pitch nil :font endless-variable-pitch-font :height 155 :weight 'regular)
 
-(set-face-attribute 'default nil :font endless-code-font :height 100)
-(set-face-attribute 'fixed-pitch nil :font endless-code-font :height 110 :weight 'regular)
-
-;;; Previous Font "Leckerli One" Princess Sofia
-(set-face-attribute 'variable-pitch nil :font endless-variable-pitch-font :height 165 :weight 'regular)
-
-(variable-pitch-mode t)
-
-(custom-set-variables '(font-lock-support-mode 'tree-sitter-lock-mode))
+  (variable-pitch-mode t)
+  (custom-set-variables '(font-lock-support-mode 'tree-sitter-lock-mode)))
 
 (defun spaceorg-font-setup ()
   ;; Replace list hyphen with dot
@@ -52,7 +58,7 @@
                   (org-level-6 . 1.02)
                   (org-level-7 . 1.02)
                   (org-level-8 . 1.02)))
-    (set-face-attribute (car face) nil :font endless-variable-pitch-font :weight 'regular :height (cdr face)))
+    (set-face-attribute (car face) nil :font "Salsa" :weight 'regular :height (cdr face)))
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
@@ -116,7 +122,7 @@
       `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
 
 (set-frame-parameter nil 'alpha '(100 . 100))
-;; (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+;; (add-hook 'window-setup-hook 'toggle-frame-fullscreen t)
 ;; (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
 (defun toggle-transparency ()
@@ -129,7 +135,7 @@
                     ;; Also handle undocumented (<active> <inactive>) form.
                     ((numberp (cadr alpha)) (cadr alpha)))
               100)
-         '(90 . 50) '(100 . 100)))))
+         '(85 . 50) '(100 . 100)))))
 (toggle-transparency)
 
 (set-fringe-style 1)
@@ -137,21 +143,28 @@
 
 (defun set-window-height (height)
   "Set the height of the current window to the specified HEIGHT."
-  (interactive "nWindow height: ")
+  (interactive "nSet window height: ")
   (if (> height (window-total-height))
       (enlarge-window (- height (window-total-height)))
     (shrink-window (- (window-total-height) height))))
 
 (defun set-window-width (width)
   "Set the width of the current window to WIDTH."
-  (interactive "nNew window width: ")
+  (interactive "nSet window width: ")
   (if (> width (window-width))
       (enlarge-window-horizontally (- width (window-width)))
     (shrink-window-horizontally (- (window-width) width))))
 
+(defun split-window-vertically-with-width (width)
+  "Splits the current window vertically and switches to the new window.
+     The new window will be given the specified WIDTH."
+  (interactive "nWindow height: ")
+  (split-window-right)
+  (windmove-right)
+  (set-window-width width))
 
 (defun split-window-below-with-height (height)
-  "Split the current window horizontally and switch to the new window.
+  "Splits the current window horizontally and switches to the new window.
      The new window will be given the specified HEIGHT."
   (interactive "nWindow height: ")
   (split-window-below)
@@ -171,7 +184,7 @@
 (defun quit-window-and-kill ()
   (interactive)
   (kill-this-buffer)
-  (delete-window))
+  (evil-window-delete))
 
 (defun split-vterm (height)
   "Split vterm"
@@ -183,11 +196,8 @@
             (lambda ()
               (when (eq splitwin (selected-window))
                 (delete-window splitwin)))))
-;;(general-def 'normal 'vterm-mode-map
-;;  "C-c" 'vterm--self-insert
-;;  "C-d" 'kill-this-buffer)
 
-(defun split-h-vterm-window ()
+(defun split-h-vterm ()
   (interactive)
   (split-vterm 10)
   (hide-mode-line-mode))
@@ -197,6 +207,7 @@
     (npm . "npm start")
     (python . "python main.py")
     (pnpm . "pnpm run")
+    (flutter . "flutter run -d linux")
     (make . "make")))
 
 ;; Define a map that contains the package manager/build system config file names
@@ -205,46 +216,87 @@
     (npm . "package.json")
     (python . "main.py")
     (pnpm . "pnpm-lock.json")
+    (flutter . "pubspec.yaml")
     (make . "Makefile")))
+
+(defvar project-term-run-cmd nil)
+(defun set-project-run-cmd ()
+  "Set the project build/run command"
+  (interactive)
+  (setq project-term-run-cmd (compilation-read-command project-term-run-cmd)))
+
+(defun run-project-in-term ()
+  "Run current project in Vterm"
+  (interactive)
+  (setq compilation-window-width 80)
+  (setq compilation-buffer-name "VTermCompilation")
+  (setq compilation-project--root doom-modeline--project-root)
+  (save-buffer)
+  (if (get-buffer compilation-buffer-name)
+      (kill-buffer compilation-buffer-name))
+
+  ;;; If `project-term-run-cmd` is null
+  (if (eql project-term-run-cmd nil)
+      (set-project-run-cmd))
+  (if (and (not (eql compilation-project--root default-directory))
+	   (not (eql project-term-run-cmd nil)))
+      (set-project-run-cmd))
+
+  ;;; If `project-term-run-cmd` is not null
+  (split-window-vertically-with-width compilation-window-width)
+  (setq compilation-splitwin (selected-window))
+  (vterm)
+  (vterm-send-string (concat project-term-run-cmd "\n"))
+  (rename-buffer compilation-buffer-name)
+  (add-hook 'kill-buffer-hook
+            (lambda ()
+	      (progn
+		(when (eq compilation-splitwin (selected-window))
+                  (delete-window compilation-splitwin)))))
+  )
+
 
 (defun run-current-project ()
   "Run the current project"
   (interactive)
-  (let ((project-root default-directory)
+  (let ((project-root doom-modeline--project-root)
         (runconf-file (locate-dominating-file default-directory ".runconf"))
         (run-command nil))
+    ;; Get the contents of the file if it exists
     (if runconf-file
         (with-temp-buffer
           (insert-file-contents (concat runconf-file ".runconf"))
           (setq run-command (buffer-string))))
 
+    ;;; Set the run/build cmd
     (if (not run-command)
         (let ((config-file nil))
           (dolist (file-map project-config-files)
             (progn
-              (setq config-file-name (cdr file-map))
-              (when (locate-dominating-file project-root config-file-name)
+	      (setq config-file-name (cdr file-map))
+	      (when (locate-dominating-file project-root config-file-name)
                 (setq run-command (cdr (assq (car (rassoc config-file-name project-config-files)) project-run-cmds)))
                 (write-region run-command nil (concat project-root ".runconf")))))))
-    
+
+    ;;; If no .runconf file is found then generate one
     (if (and (not run-command) (not runconf-file))
-        (write-region "" nil (concat project-root ".runconf")))
-    
+        (write-region "" nil (concat project-root ".runconf"))
+      (message "No pre-configured build cmd package manager file found, generated `.runconf` in the project root."))
+
+    ;;; Split a popup and run the project
     (when run-command
       (save-buffer)
       (split-window-below-with-height 14)
       (if (get-buffer "Runner")
           (kill-buffer "Runner"))
 
-      (term (concat "cd " project-root " && " run-command "\n"))
+      (term (concat "cd " project-root " && "run-command "\n"))
       (general-def
-       :keymaps 'local
-       :states '(normal insert)
-       "C-c" 'vterm--self-insert
-       "C-d" '(lambda () (interactive) (kill-this-buffer))
-       "q" '(lambda () (interactive) (kill-this-buffer)))
-      ;; (vterm-send-string (concat "cd " project-root " && " run-command "\n"))
-      ;; (set-frame-name "project-runner")
+	:keymaps 'local
+	:states '(normal insert)
+	"C-c" 'vterm--self-insert
+	"C-d" '(lambda () (interactive) (kill-this-buffer))
+	"q" '(lambda () (interactive) (kill-this-buffer)))
       (setq splitwin (selected-window))
       (rename-buffer "Runner")
       (add-hook 'kill-buffer-hook
@@ -318,12 +370,13 @@
   (setq evil-want-integration t
         evil-want-keybinding nil
         evil-want-C-u-scroll t
-        evil-want-Y-yank-to-eol t
+        evil-want-Y-yank-to-eol nil
         evil-want-C-d-scroll t
         evil-want-C-i-jump nil
         evil-move-cursor-back nil
-        evil-move-beyond-eol t
+        evil-move-beyond-eol nil
         evil-ex-visual-char-range t)
+
   :config
   (evil-mode 1)
   (evil-set-undo-system 'undo-tree)
@@ -377,8 +430,7 @@
   "B" 'evil-beginning-of-line
   "P" 'evil-jump-item
   "g/" 'evilnc-comment-or-uncomment-lines
-  ";" 'ex-M
-  )
+  ";" 'ex-M)
 
 
 ;;; CTRL Maps
@@ -386,11 +438,20 @@
 (general-def '(normal insert) 'override
   "C-<tab>" 'consult-buffer
   "C-w" 'evil-window-map
+  "<f5>" '(run-current-project :which-key "Run Project")
+  "<f6>" '(run-project-in-term :which-key "Run Project in term")
   "C-o" 'toggle-transparency
   "C-k" 'evil-scroll-line-up
   "C-j" 'evil-scroll-line-down
+  "C--" 'text-scale-decrease
+  "C-=" 'text-scale-increase
   "C-," 'evil-window-increase-width
-  "C-." 'evil-window-decrease-width)
+  "C-." 'evil-window-decrease-width
+  ;;; Open Terminal
+  "C-t" '(vterm :which-key "Open Vterm")
+  ;; "C-ts" '(split-h-vterm :which-key "Split Vterm horizontally")
+  ;; "C-tv" '(split-h-vterm :which-key "Split Vterm vertically")
+  )
 
 (general-def 'insert
   "C-g" 'evil-normal-state
@@ -416,29 +477,30 @@
 
 (general-m
   :keymaps 'override
-  "t" '(mjort :which-key "Toogle Major Mode")
-  "m" '(hide-mode-line-mode :which-key "Toogle Modeline"))
+  "t"  '(mjort :which-key "Toogle Major Mode")
+  "m"  '(hide-mode-line-mode :which-key "Toogle Modeline"))
 
 (spaceleader-keys
-  "m" '(consult-imenu :which-key "IMenu")
-
-  "w" '(evil-window-map :which-key "Window")
+  "m"  '(consult-imenu :which-key "IMenu")
+  "w"  '(evil-window-map :which-key "Window")
   "ww" '(set-window-width :which-key "Set Width")
   "wm" '(quit-window-and-kill :which-key "Set Width")
   "wi" '(set-window-height :which-key "Set Height")
   "a"  '(ace-select-window :which-key "Select Window")
   "qq" '(save-buffers-kill-terminal :which-key "Exit Emacs")
-  "d" '(kill-this-buffer :which-key "Exit Emacs")
-
-  "e" '(treemacs-select-window :which-key "Treemacs Toggle"))
+  "d"  '(kill-this-buffer :which-key "Kill Buffer")
+  "e"  '(treemacs-select-window :which-key "Treemacs Toggle"))
 
 (spaceleader-keys
   :prefix "SPC t"
+  :wk "Toogle"
   "t" '(consult-theme :which-key "choose theme")
   "c" '(display-time-mode :which-key "Display Time")
+  "u" '(undo-tree-mode :which-key "Display Time")
   "s" '(hydra-text-scale/body :which-key "scale text")
   "w" '(toggle-transparency :which-key "scale text")
   "l" '(display-line-numbers-mode :which-key "Toogle line numbers")
+  "h" '(hl-line-mode :which-key "Toogle line highlight")
   "b" '(display-battery-mode :which-key "Toogle Battery")
   "v" '(visual-fill-column-mode :which-key "Center Column")
   "d" '(elcord-mode :which-key "Discord status")
@@ -448,13 +510,14 @@
   :prefix "SPC f"
   "s" '(save-buffer :which-key "Save Buffer")
   "e" '(rename-file :which-key "Rename File")
+  "d" '(delete-file :which-key "Delete File")
   "o" '(find-file :which-key "Open File")
-  "f" '(projectile-find-file :which-key "Find file in project")
+  "f" '(project-find-file :which-key "Find file in project")
   "r" '(consult-recent-file :which-key "Open Recent File"))
 
 (spaceleader-keys
   :prefix "SPC s"
-  ;; "s"'(swiper :which-key "Search...")
+  "s"'(swiper-isearch :which-key "Search...")
   "t"'(gts-do-translate :which-key "Translate")
   "d"'(dictionary-search :which-key "Search word..."))
 
@@ -469,7 +532,7 @@
 (spaceleader-keys
   :prefix "SPC i"
   "d" '(insert-current-date :which-key "Insert Date")
-  "q" '(wrap-quotes :which-key "Wrap quites")
+  "'" '(wrap-quotes :which-key "Wrap Quotes")
   "[" '(wrap-sb :which-key "Wrap []")
   "9" '(wrap-rb :which-key "Wrap ()")
   "]" '(wrap-cb :which-key "Wrap {}")
@@ -489,13 +552,12 @@
 
 (spaceleader-keys
   :prefix "SPC o"
-  "T" '(mtt :which-key "Open Term")
-  "t" '(split-h-vterm-window :which-key "Open Term")
-  "j" '((lambda () (interactive) (find-file "~/Books/Personal/Journal.org")) :which-key "Open Journal")
+  "t" '(split-h-vterm :which-key "Open Term")
+  "j" '((lambda () (interactive) (find-file "~/Bücher/Personal/Journal.org")) :which-key "Open Journal")
   "c" '((lambda () (interactive) (find-file "~/.emacs.d/Config.org")) :which-key "Open Config")
   "r" '(split-repl :which-key "Elisp REPL")
   "b" '(eww :which-key "eww")
-  ;; "s" '(persp-switch-to-scratch-buffer :which-key "Open Scratch buffer")
+  "s" '(scratch-buffer :which-key "Open Scratch buffer")
   "e" '(eshell :which-key "Eshell"))
 
 (spaceleader-keys
@@ -504,6 +566,53 @@
   "k" '(kill-this-buffer :which-key "Kill Buffer")
   "f" '(switch-to-buffer :which-key "Switch Buffer")
   "d" '(kill-buffer :which-key "Find & Kill"))
+
+(general-def '(normal insert) 'override
+  "C-b a" '(bookmark-set :whick-key "Add Bookmark")
+  "C-b f" '(bookmark-jump :whick-key "Open Bookmark")
+  "C-b d" '(bookmark-delete :whick-key "Delete Bookmark"))
+
+(spaceleader-keys
+  :prefix "SPC p"
+  "c" '(set-project-run-cmd :which-key "Set run/build cmd"))
+;;   "e" '(treemacs-projectile :which-key "Treemacs Projectile")
+;;   "o" '(projectile-switch-project :which-key "Open Project")
+;;   "d" '(projectile-remove-known-project :which-key "Add Project")
+;;   "a" '(projectile-add-known-project :which-key "Add Project"))
+
+(use-package doom-themes
+  :demand
+  :init (load-theme 'doom-gruvbox t))
+
+(use-package doom-modeline
+  :demand t
+  :init
+  (setq doom-modeline-height 24
+        doom-modeline-buffer-file-name-style 'truncate-from-project
+        display-time-format " %H:%M:%S "
+        display-time-interval 1
+        doom-modeline-buffer-encoding nil)
+  (display-time-mode 1)
+  (doom-modeline-mode 1))
+
+(doom-modeline-def-modeline 'main
+  '(bar window-number modals
+	matches buffer-info
+	remote-host checker
+	parrot selection-info
+        buffer-position)
+  '(objed-state
+    persp-name
+    battery grip
+    irc mu4e
+    gnus github
+    debug
+    misc-info lsp
+    minor-modes input-method
+    indent-info buffer-encoding
+    major-mode process vcs " "))
+
+(add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
 
 (use-package async
   :ensure t
@@ -532,20 +641,12 @@
 ;;   ;; (setq projectile-completion-system 'vertico)
 ;;   (projectile-mode +1))
 
-;; (spaceleader-keys
-;;   :prefix "SPC p"
-;;   "r" '(run-current-project :which-key "Run Project")
-;;   "e" '(treemacs-projectile :which-key "Treemacs Projectile")
-;;   "o" '(projectile-switch-project :which-key "Open Project")
-;;   "d" '(projectile-remove-known-project :which-key "Add Project")
-;;   "a" '(projectile-add-known-project :which-key "Add Project"))
-
 (use-package magit
   :custom
   (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
 
-;; (use-package evil-magit
-;;   :after magit)
+(use-package evil-magit
+  :after magit)
 
 (use-package evil-nerd-commenter
   :ensure t)
@@ -579,10 +680,6 @@
 (use-package emojify
     :hook (after-init . global-emojify-mode))
 
-(use-package elcord
-  :config
-  (setq elcord-refresh-rate 5))
-
 (use-package undo-tree
   :init
   (global-undo-tree-mode))
@@ -591,15 +688,6 @@
   :demand t
   :config
   (smartparens-global-mode))
-
-(use-package go-translate
-  :config
-  (setq gts-translate-list '(("en" "de") ("de" "en") ("fr" "en")))
-  (setq gts-default-translator
-        (gts-translator
-         :picker (gts-prompt-picker)
-         :engines (list (gts-google-engine))
-         :render (gts-buffer-render))))
 
 ;; (use-package beacon
 ;;   :ensure t
@@ -653,133 +741,33 @@
 
 (general-def '(normal visual insert) 'override
   "C-p" 'persp-switch
+  "<f1>" 'persp-switch
   "C-a o" nil
-  "C-9" 'persp-next
-  "C-8" 'persp-prev)
+  "C-0" 'persp-next
+  "C-9" 'persp-prev)
 
-(use-package dabbrev
+(use-package company
   :config
-  (setq dabbrev-check-all-buffers t)
-  :bind (("M-/" . dabbrev-completion)
-         ("C-M-/" . dabbrev-expand))
+  (setq ispell-dictonary "en_US"
+	company-ispell-dictonary ispell-dictonary)
+  :bind
+  (:map company-active-map
+        ("<tab>" . company-complete-common-or-cycle)
+        ("<backtab>" . company-select-previous)
+        ("C-j" . company-complete-common-or-cycle)
+        ("C-p" . company-select-previous))
   :custom
-  (dabbrev-ignored-buffer-regexps '("\\.\\(?:pdf\\|jpe?g\\|png\\)\\'")))
-(setq ispell-program-name "ispell"
-      ispell-dictionary "english")
+  (company-minimum-prefix-length 1)
+  (add-to-list 'company-backends 'company-ispell)
+  (company-idle-delay 0.0))
 
-(use-package corfu
-  :hook (lsp-completion-mode . kb/corfu-setup-lsp) ; Use corfu for lsp completion
-  :general
-  (:keymaps 'corfu-map
-            :states 'insert
-            "C-n" #'corfu-next
-            "C-p" #'corfu-previous
-            "TAB"  #'corfu-next
-            [tab]  #'corfu-next
-            "S-TAB"  #'corfu-next
-            [backtab]  #'corfu-next
+(global-company-mode)
 
-            "<escape>" #'corfu-quit
-            "<return>" #'corfu-insert
-            "H-SPC" #'corfu-insert-separator
-            ;; "SPC" #'corfu-insert-separator ; Use when `corfu-quit-at-boundary' is non-nil
-            "M-d" #'corfu-show-documentation
-            "C-g" #'corfu-quit
-            "M-l" #'corfu-show-location)
-  :custom
-  ;; Works with `indent-for-tab-command'. Make sure tab doesn't indent when you
-  ;; want to perform completion
-  (tab-always-indent 'complete)
-  (completion-cycle-threshold nil)      ; Always show candidates in menu
-
-  (corfu-auto nil)
-  (corfu-auto-prefix 2)
-  (corfu-auto-delay 0.25)
-
-  (corfu-min-width 80)
-  (corfu-max-width corfu-min-width)     ; Always have the same width
-  (corfu-count 14)
-  (corfu-scroll-margin 4)
-  (corfu-cycle nil)
-
-  ;; `nil' means to ignore `corfu-separator' behavior, that is, use the older
-  ;; `corfu-quit-at-boundary' = nil behavior. Set this to separator if using
-  ;; `corfu-auto' = `t' workflow (in that case, make sure you also set up
-  ;; `corfu-separator' and a keybind for `corfu-insert-separator', which my
-  ;; configuration already has pre-prepared). Necessary for manual corfu usage with
-  ;; orderless, otherwise first component is ignored, unless `corfu-separator'
-  ;; is inserted.
-  (corfu-quit-at-boundary nil)
-  (corfu-separator ?\s)            ; Use space
-  (corfu-quit-no-match 'separator) ; Don't quit if there is `corfu-separator' inserted
-  (corfu-preview-current 'insert)  ; Preview first candidate. Insert on input if only one
-  (corfu-preselect-first t)        ; Preselect first candidate?
-
-  ;; Other
-  (corfu-echo-documentation nil)        ; Already use corfu-doc
-  (lsp-completion-provider :none)       ; Use corfu instead for lsp completions
+(use-package company-box
   :init
-  (global-corfu-mode)
-  :config
-  ;; NOTE 2022-03-01: This allows for a more evil-esque way to have
-  ;; `corfu-insert-separator' work with space in insert mode without resorting to
-  ;; overriding keybindings with `general-override-mode-map'. See
-  ;; https://github.com/minad/corfu/issues/12#issuecomment-869037519
-  ;; Alternatively, add advice without `general.el':
-  ;; (advice-add 'corfu--setup :after 'evil-normalize-keymaps)
-  ;; (advice-add 'corfu--teardown :after 'evil-normalize-keymaps)
-  (general-add-advice '(corfu--setup corfu--teardown) :after 'evil-normalize-keymaps)
-  (evil-make-overriding-map corfu-map)
-
-  ;; Enable Corfu more generally for every minibuffer, as long as no other
-  ;; completion UI is active. If you use Mct or Vertico as your main minibuffer
-  ;; completion UI. From
-  ;; https://github.com/minad/corfu#completing-with-corfu-in-the-minibuffer
-  (defun corfu-enable-always-in-minibuffer ()
-    "Enable Corfu in the minibuffer if Vertico/Mct are not active."
-    (unless (or (bound-and-true-p mct--active) ; Useful if I ever use MCT
-                (bound-and-true-p vertico--input))
-      (setq-local corfu-auto nil)       ; Ensure auto completion is disabled
-      (corfu-mode 1)))
-  (add-hook 'minibuffer-setup-hook #'corfu-enable-always-in-minibuffer 1)
-
-  ;; Setup lsp to use corfu for lsp completion
-  (defun kb/corfu-setup-lsp ()
-    "Use orderless completion style with lsp-capf instead of the
-default lsp-passthrough."
-    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
-          '(orderless))))
-
-(use-package orderless
-  :init
-  (setq completion-styles '(orderless basic)
-        completion-category-defaults nil
-        completion-category-overrides '((file (styles . (partial-completion))))))
-
-(use-package kind-icon
-  :after corfu
-  :custom
-  (kind-icon-use-icons t)
-  (kind-icon-default-face 'corfu-default) ; Have background color be the same as `corfu' face background
-  (kind-icon-blend-background nil)  ; Use midpoint color between foreground and background colors ("blended")?
-  (kind-icon-blend-frac 0.08)
-
-  ;; NOTE 2022-02-05: `kind-icon' depends `svg-lib' which creates a cache
-  ;; directory that defaults to the `user-emacs-directory'. Here, I change that
-  ;; directory to a location appropriate to `no-littering' conventions, a
-  ;; package which moves directories of other packages to sane locations.
-  (svg-lib-icons-dir (no-littering-expand-var-file-name "svg-lib/cache/")) ; Change cache dir
-  :config
-  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter) ; Enable `kind-icon'
-
-  ;; Add hook to reset cache so the icon colors match my theme
-  ;; NOTE 2022-02-05: This is a hook which resets the cache whenever I switch
-  ;; the theme using my custom defined command for switching themes. If I don't
-  ;; do this, then the backgound color will remain the same, meaning it will not
-  ;; match the background color corresponding to the current theme. Important
-  ;; since I have a light theme and dark theme I switch between. This has no
-  ;; function unless you use something similar
-  (add-hook 'kb/themes-hooks #'(lambda () (interactive) (kind-icon-reset-cache))))
+  (setq company-box-scrollbar nil
+	company-box-tooltip-maximum-width 140)
+  :hook (company-mode . company-box-mode))
 
 (use-package vertico
   :demand t                             ; Otherwise won't get loaded immediately
@@ -812,7 +800,7 @@ default lsp-passthrough."
             "C-<backspace>" #'vertico-directory-delete-word
             "RET" #'vertico-directory-enter
             "C-i" #'vertico-quick-insert
-            "C-o" #'vertico-quick-exit
+            ;; "C-o" #'vertico-quick-exit
             "M-G" #'vertico-multiform-grid
             "M-F" #'vertico-multiform-flat
             "M-R" #'vertico-multiform-reverse
@@ -824,9 +812,9 @@ default lsp-passthrough."
   :custom
   (vertico-count 13)
   (vertico-resize t)
-  (vertico-cycle nil)
+  (vertico-cycle t)
   ;; Extensions
-  (vertico-grid-separator "       ")
+  (vertico-grid-separator "   |   ")
   (vertico-grid-lookahead 50)
   (vertico-buffer-display-action '(display-buffer-reuse-window))
   (vertico-multiform-categories
@@ -878,10 +866,16 @@ default lsp-passthrough."
                 (setq cand (funcall orig cand prefix suffix index _start))
                 (concat
                  (if (= vertico--index index)
-                     (propertize "🔪 " 'face 'vertico-current)
+                     (propertize "📍" 'face 'vertico-current)
                    "  ")
                  cand)))
   )
+
+(use-package orderless
+  :ensure t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
 
 (use-package savehist
   :init
@@ -956,7 +950,7 @@ default lsp-passthrough."
         treemacs-width-increment                 1
         treemacs-workspace-switch-cleanup        nil))
 
-(use-package treemacs-projectile)
+;; (use-package treemacs-projectile)
 
 (use-package treemacs-all-the-icons
   :demand t
@@ -972,37 +966,6 @@ default lsp-passthrough."
   "J" 'evil-scroll-line-down
   "C-k" 'evil-scroll-line-up
   "C-j" 'evil-scroll-line-down)
-
-(use-package doom-themes
-  :demand
-  :init (load-theme 'modus-vivendi-deuteranopia t))
-
-(use-package doom-modeline
-  :demand t
-  :init
-  (setq doom-modeline-height 24
-        display-time-format " %H:%M:%S "
-        display-time-interval 1
-        doom-modeline-buffer-encoding nil)
-  (display-time-mode 1)
-  (doom-modeline-mode 1))
-(doom-modeline-def-modeline 'main
-  '(bar window-number modals
-	matches buffer-info
-	remote-host checker
-	parrot selection-info)
-  '(objed-state
-    persp-name
-    battery grip
-    irc mu4e
-    gnus github
-    buffer-position debug
-    misc-info lsp
-    minor-modes input-method
-    indent-info buffer-encoding
-    major-mode process vcs " "))
-
-(add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
 
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
@@ -1063,7 +1026,8 @@ default lsp-passthrough."
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols)))
 
 (use-package lsp-mode
-  :hook (lsp-mode . spacelsp-mode-setup)
+  :hook ((lsp-mode . spacelsp-mode-setup)
+	 (lsp-mode . hs-minor-mode))
   :commands (lsp lsp-deferred)
   :init
   (setq lsp-keymap-prefix "C-l")
@@ -1085,10 +1049,28 @@ default lsp-passthrough."
         lsp-ui-doc-show-with-cursor t
         lsp-ui-doc-show-with-mouse t))
 
-;; (use-package lsp-ivy)
+(defun lsp-outline()
+  "Display lsp symbols for current file"
+  (interactive)
+  (if (eql major-mode 'dart-mode)
+      (lsp-dart-show-flutter-outline nil))
+  (if (or (eql major-mode 'c-mode) (eql major-mode 'c++-mode))
+      (lsp-treemacs-symbols)))
+
+(defun lsp-mode-custom-keymaps()
+  (interactive)
+  (general-def '(normal insert) 'override
+    "C-S-i"   'lsp-format-buffer
+    "TAB"   nil
+    "<f2>"  'lsp-rename
+    "<f7>"  'lsp-clangd-find-other-file
+    "C-l f" 'lsp-ui-doc-focus-frame
+    "C-l o" 'lsp-outline
+    "C-l u" 'lsp-ui-doc-unfocus-frame))
+
+(add-hook 'lsp-mode-hook #'lsp-mode-custom-keymaps)
 
 (use-package dap-mode
-  ;; Uncomment the config below if you want all UI panes to be hidden by default!
   :custom
   (lsp-enable-dap-auto-configure nil)
   :config
@@ -1128,10 +1110,11 @@ default lsp-passthrough."
 (setq lsp-clangd-binary-path "/bin/clangd")
 (add-hook 'c-mode-hook 'lsp)
 (add-hook 'c++-mode-hook 'lsp)
+;; (add-to-list 'major-mode-remap-alist '(c-or-c++-mode . c-or-c++-ts-mode))
 
 (with-eval-after-load 'lsp-mode
   (require 'dap-cpptools))
-
+  
 ;; (use-package cmake-mode)
 
 (use-package glsl-mode)
@@ -1343,7 +1326,7 @@ default lsp-passthrough."
   :config
   (setq org-ellipsis " ↴"
         org-hide-emphasis-markers t
-        org-agenda-files '("~/Books/Personal/Tasks.org")
+        org-agenda-files '("~/Bücher/Personal/Tasks.org")
         org-agenda-start-with-log-mode t
         org-log-done 'time
         org-log-into-drawer t)
@@ -1467,6 +1450,19 @@ default lsp-passthrough."
 
 (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'spaceorg-babel-tangle-config)))
 
+(use-package go-translate
+  :config
+  (setq gts-translate-list '(("de" "en") ("en" "de")))
+  (setq gts-default-translator
+        (gts-translator
+         :picker (gts-prompt-picker)
+         :engines (list (gts-google-engine))
+         :render (gts-buffer-render))))
+
+(use-package elcord
+  :config
+  (setq elcord-refresh-rate 5))
+
 (use-package pdf-tools
   :demand t
   :config
@@ -1511,18 +1507,31 @@ default lsp-passthrough."
   (pdf-outline)
   (pdf-outline-quit-and-kill))
 
-(setq pdf-annot-minor-mode-map-prefix "a")
+(defun open-thought-bubble ()
+  (interactive)
+  (split-window-horizontally)
+  (windmove-right)
+  (set-window-width 90)
+  (find-file "~/Bücher/Personal/ThoughtBubble.org"))
+
+;; (setq pdf-annot-minor-mode-map-prefix "a")
 
 (general-def 'normal 'pdf-view-mode-map
   "q" nil
   "c" 'pdf-view-center-in-window
   "d" 'pdf-view-scroll-up-or-next-page
+  "u" 'pdf-view-scroll-down-or-previous-page
+  "," 'pdf-view-scroll-up-or-next-page
+  "." 'pdf-view-scroll-down-or-previous-page
   "f" 'isearch-forward
   "i" 'pdf-view-midnight-minor-mode
   "I" 'pdf-view-themed-minor-mode
   "J" 'pdf-view-next-page
   "K" 'pdf-view-previous-page
-  "o" 'pdf-outlf
+  "v" 'pdf-outlf
+  "o" 'pdf-outl
+  "b" 'pdf-outline
+  "gh" 'pdf-history-goto
 
   "ah" 'pdf-annot-add-highlight-markup-annotation
   "ax" 'pdf-annot-add-strikeout-markup-annotation
@@ -1532,9 +1541,8 @@ default lsp-passthrough."
   "at" 'pdf-annot-add-text-annotation
   "al" 'pdf-annot-list-annotations
 
-  "v" 'pdf-outl
+  "sj" 'open-thought-bubble
   "r" 'image-rotate
-  "u" 'pdf-view-scroll-down-or-previous-page
   "w" 'pdf-view-fit-width-to-window
   "x" 'poutkill)
 
@@ -1570,12 +1578,19 @@ default lsp-passthrough."
   "K" 'nov-previous-document
   "J" 'nov-next-document)
 
+(use-package evil-multiedit)
+
+(general-m
+  :states '(visual normal)
+  "n" '(evil-multiedit-match-and-next :which-key "Mulitple Cursor match next")
+  "p" '(evil-multiedit-match-and-previous :which-key "Mulitple Cursor match next")
+  "a" '(evil-multiedit-match-all :which-key "Mulitple Cursor match next"))
+
 (use-package vterm
   :commands vterm
   :config
-  (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] *")  ;; Set this to match your custom shell prompt
-  ;;(setq vterm-shell "zsh")                       ;; Set this to customize the shell to launch
-  (setq vterm-max-scrollback 10000))
+  (setq vterm-shell "fish")                       ;; Set this to customize the shell to launch
+  (setq vterm-max-scrollback 200000))
 (use-package multi-vterm
   :ensure t)
 
@@ -1728,7 +1743,7 @@ default lsp-passthrough."
   (setq-default shr-use-fonts nil))
 
 (defun spaceorg-mode-visual-fill()
-  (setq visual-fill-column-width 150
+  (setq visual-fill-column-width 120
         visual-fill-column-center-text t)
   (visual-fill-column-mode 1))
 
@@ -1736,3 +1751,5 @@ default lsp-passthrough."
   :hook (org-mode . spaceorg-mode-visual-fill))
 
 (kill-buffer "*Messages*")
+(recentf-mode 1)
+(recentf-load-list)

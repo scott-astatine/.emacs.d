@@ -26,6 +26,7 @@
                 ielm-mode-hook
                 dictonary-mode-hook
                 image-mode-hook
+                lsp-help-mode-hook
                 nov-mode-hook
                 ibuffer-mode-hook
                 pdf-outline-buffer-mode-hook
