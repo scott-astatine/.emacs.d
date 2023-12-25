@@ -12,8 +12,7 @@ Filled with my defaults & made for me!
 #+begin_src shell :results drawer
 # backup ~/.emacs.d 
 # mv ~/.emacs.d ~/.emacs.d.bak
-# git clone https://github.com/scott-astatine/.emacs.d.git ~/.emacs.d
-git status
+git clone https://github.com/scott-astatine/.emacs.d.git ~/.emacs.d
 
 #+end_src
 
