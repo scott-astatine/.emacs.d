@@ -5,12 +5,17 @@ Filled with my defaults & made for me!
   - It's got sane default evil keymaps that I use most often
   - Pdf Viewer support builtin with proper & sane keymaps
   - Configurable project runner 
+  - Latex IDE with live preview
 
 
 =If you wanna check it out or possibley use it and modify it for your own personal use then...=
-#+begin_src shell
+#+begin_src shell :results drawer
 # backup ~/.emacs.d 
 # mv ~/.emacs.d ~/.emacs.d.bak
-git clone https://github.com/scott-astatine/.emacs.d.git ~/.emacs.d
+# git clone https://github.com/scott-astatine/.emacs.d.git ~/.emacs.d
+git status
+
 #+end_src
+
+
 
