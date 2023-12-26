@@ -1,6 +1,7 @@
 ;; -*- lexical-binding: t; -*-
-(setq gc-cons-threshold (* 50 1024 1024)
-      ihibit-startup-message t
+(setq gc-cons-threshold (* 500 1024 1024)
+      reac-process-output-max (* 1024 1024)
+      inhibit-startup-message t
       native-compile-prune-cache t
       native-comp-async-report-warnings-errors nil
       visible-bell nil

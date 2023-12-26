@@ -27,12 +27,19 @@
          (window-height . 0.38)
          (reusable-frames . nil))
 
+        ("^\\magit"
+         (display-buffer-reuse-window display-buffer-in-side-window)
+         (window-height . 0.38)
+         (window-width . 0.45)
+         (side . right)
+         (reusable-frames . nil))
+
         ("^\\*TeX Help"
          (display-buffer-reuse-window display-buffer-in-side-window)
          (window-height . 0.38)
          (reusable-frames . nil))
 
-        ("\\\\bterminal\\\\b"
+        ("^\\*vterminal"
          (display-buffer-reuse-window display-buffer-in-side-window)
 	 (reusable-frames . nil))
 
@@ -168,27 +175,21 @@
   (require 'use-package)
   (setq use-package-always-defer t))
 
-;; demote installation errors to messages
-;; this variable is no longer changed by straight
-;; (advice-add use-package-ensure-function :around #'noct-use-package-ensure)
-;; (when (bound-and-true-p noct-with-demoted-errors)
-;;   (advice-add 'straight-use-package :around #'noct-inhibit-error-advice))
-;; can test with something like this:
-
 (use-package blackout
   :straight (blackout :host github :repo "raxod502/blackout")
   :demand t)
 
 (use-package no-littering
-  :ensure t)
+  :straight t)
 
 (setq auto-save-file-name-transforms
       `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
 
-;;; Previous theme --> doom-oksolar-dark, modus-vivendi-deuteranopia
+;;; Previous theme --> doom-oksolar-dark, 
 (use-package doom-themes
+  :straight t
   :demand t
-  :init (load-theme 'doom-material-dark t))
+  :init (load-theme 'modus-vivendi-deuteranopia t))
 
 (set-frame-parameter nil 'alpha '(100 . 100))
 ;; (add-hook 'window-setup-hook 'toggle-frame-fullscreen t)
@@ -422,6 +423,16 @@ command and run the project."
         (yank)
         (insert "]"))
     (message "No region selected")))
+(defun wrap-dollar ()
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (kill-region (region-beginning) (region-end))
+        (insert "$")
+        (yank)
+        (insert "$"))
+    (message "No region selected")))
+
 (defun wrap-cb ()
   (interactive)
   (if (use-region-p)
@@ -615,6 +626,7 @@ command and run the project."
   "wi" '(set-window-height :which-key "Set Height")
   "w\\" '(evil-window-set-width :which-key "Set width full")
   "w-" '(evil-window-set-height :which-key "Set height full")
+  "w C--" '(evil-window-set-height :which-key "Set height full")
   "a"  '(ace-select-window :which-key "Select Window")
   "qq" '(save-buffers-kill-terminal :which-key "Exit Emacs")
   "d"  '(kill-this-buffer :which-key "Kill Buffer")
@@ -636,6 +648,10 @@ command and run the project."
   (interactive)
   (consult-find "~/Bücher"))
 
+(defun find-in-projects-dir ()
+  (interactive)
+  (consult-find "~/Projects"))
+
 (leader-key-SPC
   :prefix "SPC f"
   :wk "File..."
@@ -646,9 +662,21 @@ command and run the project."
   "o" '(find-file :which-key "Open File")
   "w" '(find-file-other-window :which-key "Open File other in win")
   "t" '(consult-ripgrep :which-key "Find text in project")
+  "p" '(find-in-projects-dir :which-key "Find projects")
   "b" '(open-books-from-books-dir :which-key "Open Books")
   "f" '(project-find-file :which-key "Find file in project")
   "r" '(recentf :which-key "Open Recent File"))
+
+(leader-key-SPC
+  :prefix "SPC g"
+  :wk "Magit..."
+  "s" '(magit-stage :which-key "Stage")
+  "u" '(magit-unstage :which-key "Stage")
+  "g" '(magit :which-key "Status")
+  "d" '(magit-diff :which-key "Diff")
+  "p" '(magit-push :which-key "Push")
+  "P" '(magit-pull :which-key "Push")
+  "c" '(magit-commit :which-key "Commit"))
 
 (leader-key-SPC
   :prefix "SPC s"
@@ -672,6 +700,7 @@ command and run the project."
   "'" '(wrap-quotes :which-key "Wrap Quotes")
   "[" '(wrap-sb :which-key "Wrap []")
   "9" '(wrap-rb :which-key "Wrap ()")
+  "4" '(wrap-dollar :which-key "Wrap $")
   "]" '(wrap-cb :which-key "Wrap {}")
   "SPC" '(inspc :which-key "Insert Date")
   "t" '(insert-current-time :which-key "Insert Time")
@@ -727,21 +756,23 @@ command and run the project."
 (use-package doom-modeline
   :demand t
   :init
-  (setq doom-modeline-height 26
+  (setq doom-modeline-height                 26
         doom-modeline-buffer-file-name-style 'truncate-from-project
-	doom-modeline--vcs-icon " "
-        display-time-format " %H:%M:%S "
-        display-time-interval 1
+	doom-modeline--vcs-icon              " "
+        display-time-format                  " %H:%M:%S "
+        display-time-interval                1
+	doom-modeline-icon                   t
         doom-modeline-buffer-encoding nil)
   (display-time-mode 1)
   (doom-modeline-mode 1))
 
 (doom-modeline-def-modeline 'main
-  '(bar window-number modals
-	matches buffer-info
-	remote-host checker
-	parrot selection-info
-        buffer-position)
+  '(bar
+    window-number modals
+    matches buffer-info
+    remote-host checker
+    parrot selection-info
+    buffer-position)
   '(objed-state
     persp-name
     battery
@@ -756,7 +787,7 @@ command and run the project."
 (add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
 
 (use-package async
-  :ensure t
+  :straight t
   :defer t
   :init
   (dired-async-mode 1))
@@ -780,7 +811,7 @@ command and run the project."
   :after magit)
 
 (use-package evil-nerd-commenter
-  :ensure t)
+  :straight t)
 
 (use-package ligature
   :demand t
@@ -824,7 +855,7 @@ command and run the project."
   (smartparens-global-mode))
 
 ;; (use-package beacon
-;;   :ensure t
+;;   :straight t
 ;;   :init
 ;;   (beacon-mode 1))
 
@@ -859,11 +890,11 @@ command and run the project."
   ;; `completion-at-point' is often bound to M-TAB.
   (setq tab-always-indent 'complete))
 
-(use-package tree-sitter
-  :straight t)
-(use-package tree-sitter-langs)
+;; (use-package tree-sitter
+;;   :config
+;;   (global-tree-sitter-mode))
 
-(global-tree-sitter-mode)
+;; (use-package tree-sitter-langs)
 
 (use-package persp-mode
   :demand t
@@ -1152,7 +1183,6 @@ command and run the project."
 ;;                                   (bookmarks . "book")))
 
 (use-package lsp-mode
-  :straight t
   :hook
   (lsp-mode . outline-minor-mode)
   :commands
@@ -1249,14 +1279,14 @@ command and run the project."
     :after lsp)
 
 (use-package flycheck
-  :ensure t
+  :straight t
   :init
   (global-flycheck-mode))
 
 (use-package ripgrep)
 
 (use-package rust-mode
-  :ensure t
+  :straight t
   :hook 
   (rust-mode . lsp-deferred)
   :config
@@ -1294,7 +1324,7 @@ command and run the project."
 (use-package glsl-mode)
 
 (use-package json-mode
-  :ensure t)
+  :straight t)
 
 (use-package yaml-mode)
 
@@ -1307,7 +1337,7 @@ command and run the project."
 (use-package lsp-dart)
 
 (use-package python-mode
-  :ensure t
+  :straight t
   :hook (python-mode . lsp-deferred)
   :custom
   (python-shell-interpreter "ipython")
@@ -1323,7 +1353,7 @@ command and run the project."
 ;;   :blackout t)
 
 (use-package ess
-  :ensure t)
+  :straight t)
 
 (use-package julia-mode)
 
@@ -1357,11 +1387,11 @@ command and run the project."
 (use-package lua-mode)
 
 (use-package nim-mode
-    :ensure t
+    :straight t
     :hook (nim-mode . lsp))
 
 (use-package web-mode
-  :ensure t
+  :straight t
   :gfhook #'lsp
   :mode (("\\.[tj]sx\\'" . web-mode)
          ("\\.[tj]s\\'" . web-mode)
@@ -1376,6 +1406,8 @@ command and run the project."
   :custom
   (flycheck-tex-lacheck-executable "/bin/lacheck")
   (TeX-source-correlate-method 'synctex)
+  (TeX-clean-confirm nil)
+  (TeX-source-correlate-start-server nil)
   :hook
   ((LaTeX-mode . prettify-symbols-mode)
    (LaTeX-mode . TeX-source-correlate-mode)
@@ -1898,7 +1930,7 @@ command and run the project."
   (setq vterm-shell "fish"                       ;; Set this to customize the shell to launch
         vterm-max-scrollback 200000))
 (use-package multi-vterm
-  :ensure t)
+  :straight t)
 
 ;; (use-package emms
 ;;     :config

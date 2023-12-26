@@ -6,8 +6,9 @@
 ** early-init.el
 #+begin_src emacs-lisp :tangle ~/.emacs.d/early-init.el
 ;; -*- lexical-binding: t; -*-
-(setq gc-cons-threshold (* 50 1024 1024)
-      ihibit-startup-message t
+(setq gc-cons-threshold (* 500 1024 1024)
+      reac-process-output-max (* 1024 1024)
+      inhibit-startup-message t
       native-compile-prune-cache t
       native-comp-async-report-warnings-errors nil
       visible-bell nil
@@ -62,12 +63,19 @@ Directory for storing native comp cache
          (window-height . 0.38)
          (reusable-frames . nil))
 
+        ("^\\magit"
+         (display-buffer-reuse-window display-buffer-in-side-window)
+         (window-height . 0.38)
+         (window-width . 0.45)
+         (side . right)
+         (reusable-frames . nil))
+
         ("^\\*TeX Help"
          (display-buffer-reuse-window display-buffer-in-side-window)
          (window-height . 0.38)
          (reusable-frames . nil))
 
-        ("\\\\bterminal\\\\b"
+        ("^\\*vterminal"
          (display-buffer-reuse-window display-buffer-in-side-window)
 	 (reusable-frames . nil))
 
@@ -281,23 +289,12 @@ Install, load, and configure =straight.el=:
       (eval-print-last-sexp)))
   ;; (benchmark 1 `(load ,bootstrap-file nil 'nomessage))
   (load bootstrap-file nil 'nomessage))
-#+end_src
 
-*** Use-package
-Install =use-package.el= with optional dependencies and configure:
-#+begin_src emacs-lisp
 (straight-use-package 'use-package)
 
 (eval-when-compile
   (require 'use-package)
   (setq use-package-always-defer t))
-
-;; demote installation errors to messages
-;; this variable is no longer changed by straight
-;; (advice-add use-package-ensure-function :around #'noct-use-package-ensure)
-;; (when (bound-and-true-p noct-with-demoted-errors)
-;;   (advice-add 'straight-use-package :around #'noct-inhibit-error-advice))
-;; can test with something like this:
 
 (use-package blackout
   :straight (blackout :host github :repo "raxod502/blackout")
@@ -309,7 +306,7 @@ Install =use-package.el= with optional dependencies and configure:
 
 #+begin_src emacs-lisp
 (use-package no-littering
-  :ensure t)
+  :straight t)
 
 (setq auto-save-file-name-transforms
       `((".*" ,(no-littering-expand-var-file-name "auto-save/") t)))
@@ -318,10 +315,11 @@ Install =use-package.el= with optional dependencies and configure:
 
 ** Theme
 #+begin_src emacs-lisp
-;;; Previous theme --> doom-oksolar-dark, modus-vivendi-deuteranopia
+;;; Previous theme --> doom-oksolar-dark, 
 (use-package doom-themes
+  :straight t
   :demand t
-  :init (load-theme 'doom-material-dark t))
+  :init (load-theme 'modus-vivendi-deuteranopia t))
 
 #+end_src
 
@@ -575,6 +573,16 @@ command and run the project."
         (yank)
         (insert "]"))
     (message "No region selected")))
+(defun wrap-dollar ()
+  (interactive)
+  (if (use-region-p)
+      (progn
+        (kill-region (region-beginning) (region-end))
+        (insert "$")
+        (yank)
+        (insert "$"))
+    (message "No region selected")))
+
 (defun wrap-cb ()
   (interactive)
   (if (use-region-p)
@@ -817,6 +825,7 @@ command and run the project."
   "wi" '(set-window-height :which-key "Set Height")
   "w\\" '(evil-window-set-width :which-key "Set width full")
   "w-" '(evil-window-set-height :which-key "Set height full")
+  "w C--" '(evil-window-set-height :which-key "Set height full")
   "a"  '(ace-select-window :which-key "Select Window")
   "qq" '(save-buffers-kill-terminal :which-key "Exit Emacs")
   "d"  '(kill-this-buffer :which-key "Kill Buffer")
@@ -846,6 +855,10 @@ command and run the project."
   (interactive)
   (consult-find "~/Bücher"))
 
+(defun find-in-projects-dir ()
+  (interactive)
+  (consult-find "~/Projects"))
+
 (leader-key-SPC
   :prefix "SPC f"
   :wk "File..."
@@ -856,9 +869,25 @@ command and run the project."
   "o" '(find-file :which-key "Open File")
   "w" '(find-file-other-window :which-key "Open File other in win")
   "t" '(consult-ripgrep :which-key "Find text in project")
+  "p" '(find-in-projects-dir :which-key "Find projects")
   "b" '(open-books-from-books-dir :which-key "Open Books")
   "f" '(project-find-file :which-key "Find file in project")
   "r" '(recentf :which-key "Open Recent File"))
+
+#+end_src
+
+**** Magit — SPC f
+#+begin_src emacs-lisp
+(leader-key-SPC
+  :prefix "SPC g"
+  :wk "Magit..."
+  "s" '(magit-stage :which-key "Stage")
+  "u" '(magit-unstage :which-key "Stage")
+  "g" '(magit :which-key "Status")
+  "d" '(magit-diff :which-key "Diff")
+  "p" '(magit-push :which-key "Push")
+  "P" '(magit-pull :which-key "Push")
+  "c" '(magit-commit :which-key "Commit"))
 
 #+end_src
 
@@ -894,6 +923,7 @@ command and run the project."
   "'" '(wrap-quotes :which-key "Wrap Quotes")
   "[" '(wrap-sb :which-key "Wrap []")
   "9" '(wrap-rb :which-key "Wrap ()")
+  "4" '(wrap-dollar :which-key "Wrap $")
   "]" '(wrap-cb :which-key "Wrap {}")
   "SPC" '(inspc :which-key "Insert Date")
   "t" '(insert-current-time :which-key "Insert Time")
@@ -974,21 +1004,23 @@ command and run the project."
 (use-package doom-modeline
   :demand t
   :init
-  (setq doom-modeline-height 26
+  (setq doom-modeline-height                 26
         doom-modeline-buffer-file-name-style 'truncate-from-project
-	doom-modeline--vcs-icon " "
-        display-time-format " %H:%M:%S "
-        display-time-interval 1
+	doom-modeline--vcs-icon              " "
+        display-time-format                  " %H:%M:%S "
+        display-time-interval                1
+	doom-modeline-icon                   t
         doom-modeline-buffer-encoding nil)
   (display-time-mode 1)
   (doom-modeline-mode 1))
 
 (doom-modeline-def-modeline 'main
-  '(bar window-number modals
-	matches buffer-info
-	remote-host checker
-	parrot selection-info
-        buffer-position)
+  '(bar
+    window-number modals
+    matches buffer-info
+    remote-host checker
+    parrot selection-info
+    buffer-position)
   '(objed-state
     persp-name
     battery
@@ -1007,7 +1039,7 @@ command and run the project."
 ** Async
 #+begin_src emacs-lisp
 (use-package async
-  :ensure t
+  :straight t
   :defer t
   :init
   (dired-async-mode 1))
@@ -1043,7 +1075,7 @@ command and run the project."
 ** Nerd Commenter
 #+begin_src emacs-lisp
 (use-package evil-nerd-commenter
-  :ensure t)
+  :straight t)
 
 #+end_src
 
@@ -1112,7 +1144,7 @@ command and run the project."
 ** Beacon
 #+begin_src emacs-lisp
 ;; (use-package beacon
-;;   :ensure t
+;;   :straight t
 ;;   :init
 ;;   (beacon-mode 1))
 #+end_src
@@ -1156,11 +1188,13 @@ command and run the project."
 * UI Config
 ** Treesitter
 #+begin_src emacs-lisp
-(use-package tree-sitter
-  :straight t)
-(use-package tree-sitter-langs)
+;; (use-package tree-sitter
+;;   :config
+;;   (global-tree-sitter-mode))
 
-(global-tree-sitter-mode)
+;; (use-package tree-sitter-langs)
+
+
 
 #+end_src
 
@@ -1512,7 +1546,6 @@ command and run the project."
 *** Setup
 #+begin_src emacs-lisp
 (use-package lsp-mode
-  :straight t
   :hook
   (lsp-mode . outline-minor-mode)
   :commands
@@ -1628,7 +1661,7 @@ command and run the project."
 ** Flycheck
 #+begin_src emacs-lisp
 (use-package flycheck
-  :ensure t
+  :straight t
   :init
   (global-flycheck-mode))
 
@@ -1643,7 +1676,7 @@ command and run the project."
 *** Setup 
 #+begin_src emacs-lisp
 (use-package rust-mode
-  :ensure t
+  :straight t
   :hook 
   (rust-mode . lsp-deferred)
   :config
@@ -1702,7 +1735,7 @@ command and run the project."
 ** Json
 #+begin_src emacs-lisp
 (use-package json-mode
-  :ensure t)
+  :straight t)
 #+end_src
 
 ** YML
@@ -1729,7 +1762,7 @@ command and run the project."
 *** LSP
 #+begin_src emacs-lisp
 (use-package python-mode
-  :ensure t
+  :straight t
   :hook (python-mode . lsp-deferred)
   :custom
   (python-shell-interpreter "ipython")
@@ -1741,6 +1774,7 @@ command and run the project."
   (require 'dap-python))
 
 #+end_src
+
 *** Docstrings
 #+begin_src emacs-lisp
 ;; (use-package python-docstring
@@ -1752,7 +1786,7 @@ command and run the project."
 ** R
 #+begin_src emacs-lisp
 (use-package ess
-  :ensure t)
+  :straight t)
 #+end_src
 
 ** Julia
@@ -1812,7 +1846,7 @@ command and run the project."
 ** Nim
 #+begin_src emacs-lisp
 (use-package nim-mode
-    :ensure t
+    :straight t
     :hook (nim-mode . lsp))
 #+end_src
 
@@ -1820,7 +1854,7 @@ command and run the project."
 #+begin_src emacs-lisp
 
 (use-package web-mode
-  :ensure t
+  :straight t
   :gfhook #'lsp
   :mode (("\\.[tj]sx\\'" . web-mode)
          ("\\.[tj]s\\'" . web-mode)
@@ -1843,6 +1877,8 @@ command and run the project."
   :custom
   (flycheck-tex-lacheck-executable "/bin/lacheck")
   (TeX-source-correlate-method 'synctex)
+  (TeX-clean-confirm nil)
+  (TeX-source-correlate-start-server nil)
   :hook
   ((LaTeX-mode . prettify-symbols-mode)
    (LaTeX-mode . TeX-source-correlate-mode)
@@ -2464,7 +2500,7 @@ command and run the project."
   (setq vterm-shell "fish"                       ;; Set this to customize the shell to launch
         vterm-max-scrollback 200000))
 (use-package multi-vterm
-  :ensure t)
+  :straight t)
 
 #+end_src
 
