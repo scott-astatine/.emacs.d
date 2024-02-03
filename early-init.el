@@ -1,5 +1,6 @@
 ;; -*- lexical-binding: t; -*-
-(setq gc-cons-threshold (* 500 1024 1024)
+
+(setq gc-cons-threshold (* 200 1024 1024)
       reac-process-output-max (* 1024 1024)
       inhibit-startup-message t
       native-compile-prune-cache t
@@ -18,53 +19,6 @@
                      (emacs-init-time "%.2f")
                      gcs-done)))
 
-;;; Common hooks 
-(dolist (mode '(term-mode-hook
-                helpful-mode-hook
-                help-mode-hook
-                Man-mode-hook
-                Info-mode-hook
-                vterm-mode-hook
-                dashboard-mode-hook
-                messages-buffer-mode-hook
-                ielm-mode-hook
-                dictionary-mode-hook
-                image-mode-hook
-                lsp-help-mode-hook
-                symbols-outline-mode-hook
-                nov-mode-hook
-                TeX-special-mode-hook
-                ibuffer-mode-hook
-                pdf-outline-buffer-mode-hook
-                shell-mode-hook
-                inferior-ess-r-mode-hook
-		sage-shell-mode-hook
-                treemacs-mode-hook
-                eshell-mode-hook))
-  (add-hook mode (lambda ()
-                   (progn
-                     (setq word-wrap t)
-                     (display-line-numbers-mode 0)
-                     (hide-mode-line-mode 1)
-                     ))))
-
-;;; Major mode specific
-;; Visual Fill Modes
-(dolist (mode '(help-mode-hook
-                Man-mode-hook
-                Info-mode-hook
-		helpful-mode-hook))
-  (add-hook mode (lambda ()
-                   (progn
-                     (visual-fill-column-mode 1)
-                     ))))
-(add-hook 'Info-mode-hook
-	  (lambda ()
-	    (setq-local visual-fill-column-width 90)))
-
-
-;;; prog-mode hooks
-(add-hook 'prog-mode-hook (lambda ()
-			    (progn
-			      (setq word-wrap t)
-			      )))
+(add-to-list 'load-path "/usr/share/emacs/site-lisp/mu4e")
+(add-to-list 'load-path "/home/scott/.emacs.d/lisp")
+(require 'hide-mode-line)

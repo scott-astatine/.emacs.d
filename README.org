@@ -9,12 +9,14 @@ Filled with my defaults & made for me!
 
 
 =If you wanna check it out or possibley use it and modify it for your own personal use then...=
-#+begin_src shell :results drawer
+#+begin_src shell
 # backup ~/.emacs.d 
 # mv ~/.emacs.d ~/.emacs.d.bak
-git clone https://github.com/scott-astatine/.emacs.d.git ~/.emacs.d
-
+# git clone https://github.com/scott-astatine/.emacs.d.git ~/.emacs.d
+l / 
 #+end_src
+
+
 
 
 
