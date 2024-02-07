@@ -3,7 +3,6 @@
 ;; write all of the code with docs and in `Config.org` and tangle the code blocks to init.el
 
 ;;; -- Code
-(profiler-start 'cpu)
 (setq native-comp-eln-load-path (list (expand-file-name "eln-cache/" user-emacs-directory)))
 
 ;;; Default global variables
@@ -39,141 +38,66 @@
 (add-to-list 'auto-mode-alist '("\\.pdf\\'" . 'pdf-view-mode))
 
 ;;; display-buffer-alist  directives for split windows
-(defun add-h-display-buffer-alist (regexp &optional dedicated)
-  )
-(setq display-buffer-alist
-      `((shell-command-buffer-name-async
-	 (display-buffer-reuse-window display-buffer-no-window)
-	 (window-height . 0.38)
-	 (side . bottom)
-	 (reusable-frames . nil))
+(defun popup-display-buffer-alist-entry (regexp &optional dedicated right extra-props)
+  "Returns a list for 'display-buffer-alist' with some default properties and optional EXTRA-PROPS
+   if right is non-nil the popup window will on the right side of the window else on the bottom"
 
-	("^\\*R"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (side . bottom)
-	 (reusable-frames . nil))
+  (setq-local res-list
+	      `(,regexp
+		(display-buffer-reuse-window display-buffer-in-side-window)
+		(window-height   . 0.38)
+		(window-width    . 0.45)
+		(side            . ,(if right 'right 'bottom))
+		(dedicated       . ,(if dedicated t -1))
+		(reusable-frames . -1)))
 
-	("^\\*Flycheck"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (side . bottom)
-	 (dedicated . t)
-	 (reusable-frames . nil))
+  (if extra-props
+      (dolist (ind extra-props)
+	(add-to-list 'res-list ind t)))
+  res-list)
 
-	("^\\*Buffer"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (window-width . 0.45)
-	 (side . bottom)
-	 (dedicated . t)
-	 (reusable-frames . nil))
-
-	("*elpaca-manager[a-z]*"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (window-width . 0.45)
-	 (side . bottom)
-	 (dedicated . t)
-	 (reusable-frames . nil))
-
-	("*elpaca-log[a-z]*"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (window-width . 0.45)
-	 (side . bottom)
-	 (dedicated . t)
-	 (reusable-frames . nil))
-
-	("^\\*TeX Help"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (dedicated . t)
-	 (reusable-frames . nil))
-
-	("*[a-z]term[a-z]*"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (side . bottom)
-	 (dedicated . t)
-	 (reusable-frames . nil))
-
-	("^\\*Messages"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.30)
-	 (dedicated . t)
-	 (reusable-frames . nil))
-
-	("^\\*Warning"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.30)
-	 (dedicated . t)
-	 (reusable-frames . nil))
-
-	("^\\*Backtrace"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.30)
-	 (dedicated . t)
-	 (reusable-frames . nil))
-
-	("^\\*Go-Translate"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.30)
-	 (dedicated . t)
-	 (body-function . gts-buffer-hook)
-	 (reusable-frames . nil))
+(progn
+;;;; Bottom popup frames
+  (setq bottom-popup-buffers-alist
+	`(,shell-command-buffer-name-async
+	  "^\\*R"
+	  "^\\*Flycheck"
+	  "^\\*Buffer"
+	  "*elpaca-manager[a-z]*"
+	  "*elpaca-log[a-z]*"
+	  "^\\*TeX Help"
+	  "*[a-z]term[a-z]*"))
 
 
-	
-	("^\\*elpaca-info"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (window-width . 0.45)
-	 (side . right)
-	 (dedicated . t)
-	 (reusable-frames . nil))
+;;;; Right Side popup frames
+  (setq right-popup-buffers-alist
+	`("^\\*Messages"
+	  "^\\*Warning"
+	  "^\\*Backtrace"
+	  "^\\*elpaca-info"
+	  "^\\*lsp-"
+	  "^\\magit"
+	  "^\\*Dictionary"
+	  "^\\*R Dired"
+	  "^\\*Process"
+	  "^\\*Help"))
 
-	("^\\*lsp-"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-width . 0.45)
-	 (side . right)
-	 (body-function . aw-switch-to-window)
-	 (reusable-frames . nil))
+  (setq-local tmp-display-buff-alist '())
 
-	("^\\magit"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (window-width . 0.45)
-	 (side . right)
-	 (reusable-frames . nil))
+  (dolist (regexp bottom-popup-buffers-alist)
+    (add-to-list 'tmp-display-buff-alist (popup-display-buffer-alist-entry regexp) t))
 
-	("^\\*Dictionary"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (window-width . 0.45)
-	 (side . right)
-	 (dedicated . t)
-	 (reusable-frames . nil))
+  (add-to-list 'tmp-display-buff-alist
+	       (popup-display-buffer-alist-entry "^\\*Go-Translate" t nil '((body-function . gts-buffer-hook))))
 
-	("^\\*R Dired"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (side . right)
-	 (slot . -1)
-	 (window-width . 0.33)
-	 (reusable-frames . nil))
+  (dolist (regexp right-popup-buffers-alist)
+    (add-to-list 'tmp-display-buff-alist
+		 (popup-display-buffer-alist-entry regexp t t)) t)
 
-	("^\\*Process"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (window-height . 0.38)
-	 (window-width . 0.45)
-	 (side . right)
-	 (reusable-frames . nil))
 
-	("^\\*Help"
-	 (display-buffer-reuse-window display-buffer-in-side-window)
-	 (side . right)
-	 (slot . 1)
-	 (window-width . 0.40)
-	 (reusable-frames . nil))))
+  (setq display-buffer-alist tmp-display-buff-alist))
+
+
 
 (defun gts-buffer-hook (win)
   (aw-switch-to-window win)
@@ -496,10 +420,12 @@
   :demand t
   :init
   (general-evil-setup)
+
   :config
 
 ;;; Sanity
 
+  (define-key evil-motion-state-map  "K" nil)
   (general-define-key
    :states '(normal visual)
    "j" 'evil-next-visual-line
@@ -650,6 +576,7 @@
   :prefix "SPC t"
   :wk "Toogle"
   "t"     '(consult-theme :wk "Choose theme")
+  "a"     '(tabnine-mode :wk "Tabnine Completion")
   "i"     '(toogle-ispell-dict-lang :wk "Change Ispell dict")
   "c"     '(display-time-mode :wk "Display Time")
   "l"     '(display-line-numbers-mode :wk "Toogle line numbers")
@@ -687,7 +614,8 @@
 (leader-key-SPC
   :prefix "SPC g"
   :wk "Magit..."
-  "s"     '(magit-stage :wk "Stage")
+  "s"     '(magit-stage-modified :wk "Stage")
+  "l"     '(magit-log :wk "Commig Log")
   "u"     '(magit-unstage :wk "Stage")
   "g"     '(magit :wk "Status")
   "d"     '(magit-diff :wk "Diff")
@@ -1188,7 +1116,8 @@ command and run the project."
         "C-k" 'kill-this-buffer)
       (rename-buffer project-runner--buffername)
       (set-window-dedicated-p (selected-window) t)
-      (visual-fill-column-mode 2)
+      (evil-normal-state)
+      ;; (visual-fill-column-mode 2)
       )))
 
 (defun current-filename ()
@@ -1311,24 +1240,46 @@ command and run the project."
 (add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
 
 (require 'treesit)
-(setq treesit-extra-load-path (concat user-emacs-directory "var/tree-sitter/"))
+;; (setq treesit-extra-load-path (concat user-emacs-directory "var/tree-sitter/"))
 
 (setq treesit-language-source-alist
-   '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-     (cmake "https://github.com/uyha/tree-sitter-cmake")
-     (css "https://github.com/tree-sitter/tree-sitter-css")
-     (elisp "https://github.com/Wilfred/tree-sitter-elisp")
-     (go "https://github.com/tree-sitter/tree-sitter-go")
-     (html "https://github.com/tree-sitter/tree-sitter-html")
-     (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
-     (json "https://github.com/tree-sitter/tree-sitter-json")
-     (make "https://github.com/alemuller/tree-sitter-make")
-     (markdown "https://github.com/ikatyang/tree-sitter-markdown")
-     (python "https://github.com/tree-sitter/tree-sitter-python")
-     (toml "https://github.com/tree-sitter/tree-sitter-toml")
-     (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-     (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-     (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+   '((bash            "https://github.com/tree-sitter/tree-sitter-bash")
+     (org             "https://github.com/milisims/tree-sitter-org")
+     (markdown        "https://github.com/ikatyang/tree-sitter-markdown")
+
+     (css             "https://github.com/tree-sitter/tree-sitter-css")
+     (html            "https://github.com/tree-sitter/tree-sitter-html")
+     (tsx             "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+     (typescript      "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+     (javascript      "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+
+     (c               "https://github.com/tree-sitter/tree-sitter-c")
+     (cpp             "https://github.com/tree-sitter/tree-sitter-cpp")
+     (cmake           "https://github.com/uyha/tree-sitter-cmake")
+     (make            "https://github.com/alemuller/tree-sitter-make")
+
+     (elisp           "https://github.com/Wilfred/tree-sitter-elisp")
+     (clojure         "https://github.com/sogaiu/tree-sitter-clojure")
+     (python          "https://github.com/tree-sitter/tree-sitter-python")
+     (rust            "https://github.com/tree-sitter/tree-sitter-rust")
+     (go              "https://github.com/tree-sitter/tree-sitter-go")
+
+     (json            "https://github.com/tree-sitter/tree-sitter-json")
+     (toml            "https://github.com/tree-sitter/tree-sitter-toml")
+     (yaml            "https://github.com/ikatyang/tree-sitter-yaml")))
+
+(setq major-mode-remap-alist
+ '((yaml-mode             . yaml-ts-mode)
+   (bash-mode             . bash-ts-mode)
+   (bash-mode             . bash-ts-mode)
+   (go-mode               . go-ts-mode)
+   (rust-mode             . rust-ts-mode)
+   (shell-script-mode     . bash-ts-mode)
+   (js2-mode              . js-ts-mode)
+   (typescript-mode       . typescript-ts-mode)
+   (json-mode             . json-ts-mode)
+   (css-mode              . css-ts-mode)
+   (python-mode           . python-ts-mode)))
 
 (setq ispell-dict-toogle-state t)
 (defun toogle-ispell-dict-lang ()
@@ -1569,8 +1520,6 @@ command and run the project."
       (lsp-dart-show-flutter-outline nil)
     (symbols-outline-show)))
 
-(define-key evil-motion-state-map  "K" nil)
-(define-key evil-normal-state-map  "K" nil)
 
 (general-define-key
  :keymaps 'lsp-mode-map
@@ -1578,6 +1527,7 @@ command and run the project."
  "TAB"   nil
  "<f2>"  'lsp-rename
  "<f7>"  'lsp-clangd-find-other-file
+ "K"     'lsp-describe-thing-at-point
  "C-l f" 'lsp-ui-doc-focus-frame
  "C-l o" 'lsp-outline
  "C-l u" 'lsp-ui-doc-unfocus-frame)
@@ -1633,30 +1583,35 @@ command and run the project."
     :prefix lsp-keymap-prefix
     "d" '(dap-hydra t :wk "debugger")))
 
-(use-package flycheck
-  :init
-  (global-flycheck-mode))
+(use-package flycheck)
 
 (use-package ripgrep)
 
 (use-package rust-mode
   :hook 
-  (rust-mode . lsp-deferred)
+  (rust-ts-mode . lsp-deferred)
   :config
   (setq rust-format-on-save t
 	lsp-rust-analyzer-proc-macro-enable t))
+
 
 (add-hook 'rust-mode-hook
         (lambda () (setq indent-tabs-mode nil)))
 
 (use-package rust-playground)
 
-(use-package modern-cpp-font-lock)
-
 (setq lsp-clangd-binary-path "/bin/clangd")
-(add-hook 'c-mode-hook 'lsp)
-(add-hook 'c++-mode-hook #'modern-c++-font-lock-mode)
-(add-hook 'c++-mode-hook 'lsp)
+(add-hook 'c++-mode-hook (lambda ()
+			   (progn
+			     (lsp)
+			     (c++-ts-mode))))
+
+(add-hook 'c-mode-hook (lambda ()
+			   (progn
+			     (lsp)
+			     (c-ts-mode)))) 
+
+(add-to-list 'auto-mode-alist '("\\CMakeLists\\'" . cmake-ts-mode))
 
 (use-package go-mode
   :config
@@ -1738,8 +1693,8 @@ command and run the project."
 (use-package web-mode
   :gfhook #'lsp
   :mode (("\\.[tj]sx\\'" . web-mode)
-         ("\\.[tj]s\\'" . web-mode)
-         ("\\.html\\'" . web-mode)))
+         ("\\.[tj]s\\'"  . web-mode)
+         ("\\.html\\'"   . web-mode)))
 
 (use-package lsp-tailwindcss)
 
@@ -2065,7 +2020,6 @@ command and run the project."
         ;; (:fit . t)
         (:imagemagick . t)
         ;; (:eval . "no-export")
-        ;; (:headers . ("\\usepackage{\\string~/.emacs.d/common}"))
         ))
 
 (setq org-babel-default-header-args:sage '((:session . t)
@@ -2190,7 +2144,7 @@ command and run the project."
 
 (add-hook 'pdf-annot-list-mode-hook #'hide-mode-line-mode)
 
-(evil-set-initial-state 'pdf-view-mode 'emacs)
+;; (evil-set-initial-state 'pdf-view-mode 'emacs)
 (add-hook 'pdf-view-mode-hook
   (lambda ()
     (set (make-local-variable 'evil-emacs-state-cursor) (list nil))))
@@ -2385,10 +2339,13 @@ command and run the project."
 (general-def 'normal 'nov-mode-map
   "gh" 'nov-history-back
   "gf" 'nov-history-forward
-  "l" nil
-  "h" nil
-  "K" 'nov-previous-document
-  "J" 'nov-next-document)
+  "d"  'evil-scroll-down
+  "u"  'evil-scroll-up
+  "h"  nil
+  "l"  nil
+  "h"  nil
+  "K"  'nov-previous-document
+  "J"  'nov-next-document)
 
 (use-package pomm
   :defer 20)
@@ -2531,19 +2488,31 @@ command and run the project."
 (use-package gptel
   :config
   (setq-default gptel-model "gemini-pro" ;Pick your default model
-              gptel-backend (gptel-make-gemini
-			     "Gemini"
-			     :stream t
-			     :key "AIzaSyA7k8H5XqUu1b9lKmp9AgRsY2TbwmE1gB0")))
+		gptel-backend (gptel-make-gemini
+			       "Gemini"
+			       :stream t
+			       :key (f-read (expand-file-name "~/.secretKeys/GoogleGeminiApi")))))
 
 (general-define-key
  "<f8>" 'gptel-send)
 
 (use-package telega
-  :hook
-  (telega-chat-mode . (lambda ()(interactive) (setq-local visual-fill-column-width 78)))
   :config
-  (setq telega-server-libs-prefix "/opt/tdlib-tg"))
+  (setq telega-server-libs-prefix "/opt/tdlib-tg"
+	telega-filter-default 'all))
+
+(add-hook 'telega-chat-mode-hook
+	  (lambda ()
+	    (progn
+	      (display-line-numbers-mode 0)
+	      (tabnine-mode)
+	      (setq-local visual-fill-column-width 78))))
+
+(add-hook 'telega-root-mode-hook
+	  (lambda ()
+	    (progn
+	      (telega-filter-by-folder "Personal")
+	      (display-line-numbers-mode 0))))
 
 (general-define-key
  :states 'normal
@@ -2768,15 +2737,20 @@ command and run the project."
   (setq-default shr-inhibit-images t)   ; toggle with `I`
   (setq-default shr-use-fonts nil))
 
-(use-package diredfl
-  :hook
-  (dired-mode . diredfl-mode))
+(use-package diredfl)
 
 (use-package dired-filter
   :config
-  (require 'dired-filter)
-  :hook
-  (dired-mode . dired-filter-mode))
+  (require 'dired-filter))
+
+(add-hook 'dired-mode-hook
+	  (lambda ()
+	    (progn
+	      (text-scale-increase +2)
+	      (dired-hide-details-mode)
+	      (dired-async-mode)
+	      (diredfl-mode)
+	      (dired-filter-mode))))
 
 (setq dired-kill-when-opening-new-dired-buffer t
       ibuffer-default-sorting-mode 'major-mode)
@@ -2806,8 +2780,6 @@ command and run the project."
 
 (use-package tabnine
   :commands (tabnine-start-process)
-  :hook ((prog-mode . tabnine-mode)
-	 (org-mode . tabnine-mode))
   :diminish "⌬"
   :custom
   (tabnine-wait 1)
@@ -3015,5 +2987,3 @@ command and run the project."
     "v"  'empv-play-video
     "x"  'empv-chapter-select
     "y"  'empv-youtube)
-
-(profiler-stop)
