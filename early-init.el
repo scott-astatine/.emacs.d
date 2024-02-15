@@ -1,14 +1,17 @@
 ;; -*- lexical-binding: t; -*-
 
-(setq gc-cons-threshold (* 200 1024 1024)
-      reac-process-output-max (* 1024 1024)
-      inhibit-startup-message t
-      native-compile-prune-cache t
+(setq user-emacs-directory (expand-file-name "~/.emacs.d/.cache/")
       native-comp-async-report-warnings-errors nil
-      visible-bell nil
-      user-emacs-directory (expand-file-name "~/.emacs.d/.cache/")
+      reac-process-output-max (* 1024 1024)
+      gc-cons-threshold (* 400 1024 1024)
+      package-enable-at-startup nil
+      native-compile-prune-cache t
+      inhibit-startup-message t
       package-native-compile t
-      package-enable-at-startup nil)
+      auto-save-default nil
+      make-backup-files nil
+      create-lockfiles nil
+      visible-bell nil)
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 

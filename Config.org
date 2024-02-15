@@ -7,15 +7,18 @@
 #+begin_src emacs-lisp :tangle ~/.emacs.d/early-init.el
 ;; -*- lexical-binding: t; -*-
 
-(setq gc-cons-threshold (* 200 1024 1024)
-      reac-process-output-max (* 1024 1024)
-      inhibit-startup-message t
-      native-compile-prune-cache t
+(setq user-emacs-directory (expand-file-name "~/.emacs.d/.cache/")
       native-comp-async-report-warnings-errors nil
-      visible-bell nil
-      user-emacs-directory (expand-file-name "~/.emacs.d/.cache/")
+      reac-process-output-max (* 1024 1024)
+      gc-cons-threshold (* 400 1024 1024)
+      package-enable-at-startup nil
+      native-compile-prune-cache t
+      inhibit-startup-message t
       package-native-compile t
-      package-enable-at-startup nil)
+      auto-save-default nil
+      make-backup-files nil
+      create-lockfiles nil
+      visible-bell nil)
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
@@ -45,9 +48,8 @@ Directory for storing native comp cache
 #+end_src
 
 ** General Settings
-
 #+begin_src emacs-lisp
-;;; Default global variables
+;;;; Default global variables
 (setq scroll-step 1
       scroll-margin 2
       word-wrap t
@@ -60,7 +62,7 @@ Directory for storing native comp cache
       visible-bell nil)
 
 
-;;; Enable/disable builtin modes
+;;;; Enable/disable builtin modes
 (progn
   (scroll-bar-mode -1)
   (tool-bar-mode -1)
@@ -83,8 +85,8 @@ Directory for storing native comp cache
 
 ** display-buffer-alist
 #+begin_src emacs-lisp
-;;; display-buffer-alist  directives for split windows
-(defun popup-display-buffer-alist-entry (regexp &optional dedicated right extra-props)
+;;;; display-buffer-alist  directives for split windows
+(defun popup-alist-item (regexp &optional dedicated right extra-props)
   "Returns a list for 'display-buffer-alist' with some default properties and optional EXTRA-PROPS
    if right is non-nil the popup window will on the right side of the window else on the bottom"
 
@@ -102,46 +104,54 @@ Directory for storing native comp cache
 	(add-to-list 'res-list ind t)))
   res-list)
 
-(progn
+(defun set-display-buffer-alist (rightL &optional bottomL extraL)
+  (setq-local tmp-display-buff-alist '())
+  (if rightL
+      (dolist (regexp rightL)
+	(add-to-list 'tmp-display-buff-alist
+		     (popup-alist-item regexp t t) t)))
+  (if bottomL
+      (dolist (regexp bottomL)
+	(add-to-list 'tmp-display-buff-alist
+		     (popup-alist-item regexp t t) t)))
+  (if extraL
+      (dolist (i extraL)
+	(add-to-list 'tmp-display-buff-alist i t)))
+  (setq display-buffer-alist tmp-display-buff-alist))
+
+
 ;;;; Bottom popup frames
-  (setq bottom-popup-buffers-alist
-	`(,shell-command-buffer-name-async
-	  "^\\*R"
-	  "^\\*Flycheck"
-	  "^\\*Buffer"
-	  "*elpaca-manager[a-z]*"
-	  "*elpaca-log[a-z]*"
-	  "^\\*TeX Help"
-	  "*[a-z]term[a-z]*"))
+(setq bottom-popup-buffers-alist
+      `(,shell-command-buffer-name-async
+	"^\\*R"
+	"^\\*Flycheck"
+	"^\\*Buffer"
+	"^\\*Messages"
+	"^\\*Warnings"
+	"^\\*Backtrace"
+	"*elpaca-manager[a-z]*"
+	"*elpaca-log[a-z]*"
+	"^\\*TeX Help"
+	"*[a-z]term[a-z]*"))
 
 
 ;;;; Right Side popup frames
-  (setq right-popup-buffers-alist
-	`("^\\*Messages"
-	  "^\\*Warning"
-	  "^\\*Backtrace"
-	  "^\\*elpaca-info"
-	  "^\\*lsp-"
-	  "^\\magit"
-	  "^\\*Dictionary"
-	  "^\\*R Dired"
-	  "^\\*Process"
-	  "^\\*Help"))
+(setq right-popup-buffers-alist
+      `("^\\*elpaca-info"
+	"^\\*lsp-"
+	"^\\magit"
+	"^\\*Dictionary"
+	"^\\*R Dired"
+	"^\\*Process"
+	"^\\*Help"))
 
-  (setq-local tmp-display-buff-alist '())
-
-  (dolist (regexp bottom-popup-buffers-alist)
-    (add-to-list 'tmp-display-buff-alist (popup-display-buffer-alist-entry regexp) t))
-
-  (add-to-list 'tmp-display-buff-alist
-	       (popup-display-buffer-alist-entry "^\\*Go-Translate" t nil '((body-function . gts-buffer-hook))))
-
-  (dolist (regexp right-popup-buffers-alist)
-    (add-to-list 'tmp-display-buff-alist
-		 (popup-display-buffer-alist-entry regexp t t)) t)
+(setq custom-display-bufffer-alist
+      `(,(popup-alist-item "^\\*Go-Translate" t nil '((body-function . gts-buffer-hook)))
+	))
 
 
-  (setq display-buffer-alist tmp-display-buff-alist))
+(set-display-buffer-alist right-popup-buffers-alist bottom-popup-buffers-alist
+			  custom-display-bufffer-alist)
 
 
 
@@ -149,11 +159,16 @@ Directory for storing native comp cache
   (aw-switch-to-window win)
   (general-def
     :keymaps 'local
-    :states '(normal insert)
+    :states '(normal visual insert)
     "<escape>" 'kill-this-buffer
     "q" 'kill-this-buffer
     "s" 'gts-tts-speak-buffer-data
-    )
+    "j" 'next-line
+    "k" 'previous-line
+    "l" 'forward-char
+    "h" 'backward-char
+    "v" 'evil-visual-char)
+  (evil-insert-state)
   (hide-mode-line-mode 1))
 
 #+end_src
@@ -161,36 +176,38 @@ Directory for storing native comp cache
 ** Hooks
 *** Generals
 #+begin_src emacs-lisp
-;;; Common hooks 
+;;; Emacs Hooks
+
+;;;; Common hooks 
 (defvar hooks-for-disabling-commonmodes
   '(term-mode-hook
-       helpful-mode-hook
-       fundamental-mode-hook
-       help-mode-hook
-       Man-mode-hook
-       Info-mode-hook
-       vterm-mode-hook
-       dashboard-mode-hook
+    helpful-mode-hook
+    fundamental-mode-hook
+    help-mode-hook
+    Man-mode-hook
+    Info-mode-hook
+    vterm-mode-hook
+    dashboard-mode-hook
 
-       elpaca-log-mode-hook
-       elpaca-info-mode-hook
-       elpaca-ui-mode-hook
+    elpaca-log-mode-hook
+    elpaca-info-mode-hook
+    elpaca-ui-mode-hook
 
-       messages-buffer-mode-hook
-       ielm-mode-hook
-       dictionary-mode-hook
-       image-mode-hook
-       pdf-outline-buffer-mode-hook
-       lsp-help-mode-hook
-       shell-mode-hook
-       inferior-ess-r-mode-hook
-       sage-shell-mode-hook
-       symbols-outline-mode-hook
+    messages-buffer-mode-hook
+    ielm-mode-hook
+    dictionary-mode-hook
+    image-mode-hook
+    pdf-outline-buffer-mode-hook
+    lsp-help-mode-hook
+    shell-mode-hook
+    inferior-ess-r-mode-hook
+    sage-shell-mode-hook
+    symbols-outline-mode-hook
 
-       TeX-special-mode-hook
-       ibuffer-mode-hook
-       treemacs-mode-hook
-       eshell-mode-hook))
+    TeX-special-mode-hook
+    ibuffer-mode-hook
+    treemacs-mode-hook
+    eshell-mode-hook))
 
 (dolist (mode hooks-for-disabling-commonmodes)
   (add-hook mode (lambda ()
@@ -200,7 +217,7 @@ Directory for storing native comp cache
                      (hide-mode-line-mode 1)))))
 
 
-;;; Hooks specific to  Major mode
+;;;; Hooks specific to  Major mode
 (add-hook 'Info-mode-hook
 	  (lambda ()
 	    (setq-local visual-fill-column-width 90)))
@@ -216,7 +233,7 @@ Directory for storing native comp cache
 
 *** After init hooks
 #+begin_src emacs-lisp
-;;; After init hooks
+;;;; After init hooks
 (add-hook 'after-init-hook
           (lambda ()
             (progn
@@ -235,7 +252,7 @@ Directory for storing native comp cache
 
 *** Kill emacs hooks
 #+begin_src emacs-lisp
-;;; Kill emacs hooks
+;;;; Kill emacs hooks
 (dolist (func '(save-pdf-themed--mode-state
                 recentf-save-list
                 ))
@@ -245,12 +262,13 @@ Directory for storing native comp cache
 
 ** Fonts Config
 #+begin_src emacs-lisp
+;;; Font Config
 (progn
   (defvar arkomacs-font-size 130)
   (defvar arkomacs-variable-pich-font-size 180)
   (defvar arkomacs-code-font "JetBrains Mono")
-  (defvar arkomacs-variable-pitch-font "EtBembo")
-  (defvar arkomacs-org-heading-font "EtBembo"))
+  (defvar arkomacs-variable-pitch-font "Vollkorn")
+  (defvar arkomacs-org-heading-font arkomacs-variable-pitch-font))
 
 (defun arkomacs-font-config ()
   (interactive)
@@ -369,21 +387,59 @@ Directory for storing native comp cache
 
 #+end_src
 
+* Essentials
 ** Theme
 #+begin_src emacs-lisp
-;;; Previous theme  doom-oksolar-dark, 
-(use-package doom-themes
+(use-package ef-themes
   :demand t
   :config
   (setq doom-themes-padded-modeline t
 	doom-themes-enable-bold t
 	doom-themes-enable-italic t)
   :init
-  (load-theme 'modus-vivendi-tritanopia t))
+  (load-theme 'ef-tritanopia-dark t))
 
 #+end_src
 
-* Essentials
+** Doom Modeline
+#+begin_src emacs-lisp
+(use-package doom-modeline
+  :demand t
+  :init
+  (setq doom-modeline-height                 32
+        doom-modeline-buffer-file-name-style 'file-name
+        doom-modeline--vcs-icon              " "
+        display-time-format                  " %H:%M:%S "
+        display-time-interval                1
+        doom-modeline-icon                   t
+        doom-modeline-mu4e                   t
+        doom-modeline-buffer-encoding nil)
+  (display-time-mode 1)
+  (doom-modeline-mode 1)
+
+  :config
+  (doom-modeline-def-modeline 'main
+    '(bar
+      window-number modals
+      matches buffer-info
+      remote-host checker
+      parrot selection-info
+      buffer-position)
+    '(objed-state
+      persp-name
+      battery
+      irc mu4e
+      gnus github
+      debug
+      misc-info lsp
+      minor-modes input-method
+      indent-info buffer-encoding
+      major-mode vcs " ")))
+
+(add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
+
+#+end_src
+
 ** Smooth Scrolling
 #+begin_src emacs-lisp
 ;;; Smooth-Scrolling config
@@ -413,16 +469,19 @@ Directory for storing native comp cache
 
 (use-package nerd-icons-dired
   :demand t
+  :after nerd-icons
   :hook
   (dired-mode . nerd-icons-dired-mode))
 
 (use-package nerd-icons-completion
   :demand t
+  :after nerd-icons
   :hook (marginalia-mode . nerd-icons-completion-marginalia-setup)
   :config
   (nerd-icons-completion-mode))
 
 (use-package nerd-icons-ibuffer
+  :after nerd-icons
   :hook
   (ibuffer-mode . nerd-icons-ibuffer-mode))
 
@@ -461,13 +520,13 @@ Directory for storing native comp cache
   (evil-want-integration t)
   (evil-want-keybinding nil)
   (evil-want-C-u-scroll t)
-  (evil-want-Y-yank-to-eol nil)
+  (evil-want-Y-yank-to-eol t)
   (evil-want-C-d-scroll t)
   (evil-want-C-i-jump nil)
   (evil-move-cursor-back nil)
   (evil-vsplit-window-right t)
   (evil-split-window-below t)
-  (evil-move-beyond-eol nil)
+  (evil-move-beyond-eol t)
   (evil-ex-visual-char-range t)
   :init
   (setq evil-undo-system 'undo-fu)
@@ -495,6 +554,7 @@ Directory for storing native comp cache
 
 (use-package ace-window
   :config
+  (ace-window-display-mode)
   (ace-window-posframe-mode 1))
 
 
@@ -516,23 +576,27 @@ Directory for storing native comp cache
 ** General
 *** Setup
 #+begin_src emacs-lisp
-;;; General.el
+;;; General.el Keybindings
 (use-package general
   :demand t
   :init
   (general-evil-setup)
-
   :config
 
-;;; Sanity
+;;;; Sanity
 
   (define-key evil-motion-state-map  "K" nil)
+  (define-key evil-motion-state-map  "C-[" nil)
   (general-define-key
    :states '(normal visual)
-   "j" 'evil-next-visual-line
-   "k" 'evil-previous-visual-line
+   ;; Basic Navigation
+   "j" 'next-line
+   "k" 'previous-line
    "h" 'backward-char
    "l" 'forward-char
+
+   ;; Other Stuff
+   "gl" 'find-file-at-point
    "zw" '(count-words :wk "word-count"))
 
   (defun ex-M ()
@@ -559,7 +623,7 @@ Directory for storing native comp cache
    ";" 'ex-M)
 
 
-;;; CTRL Maps
+;;;; CTRL Maps
   ;; Minibuffer
   (general-define-key
    :keymaps 'minibuffer-mode-map
@@ -596,7 +660,7 @@ Directory for storing native comp cache
    "C-j" 'pixel-scroll-up
    "C-k" 'pixel-scroll-down)
 
-;;; For navigation in insert mode
+;;;; For navigation in insert mode
   (general-define-key
    :states 'insert
    :keymaps 'override
@@ -607,7 +671,7 @@ Directory for storing native comp cache
    "C-]" 'evil-end-of-visual-line
    "C-[" 'evil-beginning-of-visual-line)
 
-  ;; Elpaca maps
+;;;; Elpaca maps
   (general-define-key
    :keymaps 'elpaca-manager-mode-map
    "q" 'kill-this-buffer)
@@ -690,7 +754,7 @@ Directory for storing native comp cache
   :prefix "SPC t"
   :wk "Toogle"
   "t"     '(consult-theme :wk "Choose theme")
-  "a"     '(tabnine-mode :wk "Tabnine Completion")
+  "a"     '(global-tabnine-mode :wk "Tabnine Completion")
   "i"     '(toogle-ispell-dict-lang :wk "Change Ispell dict")
   "c"     '(display-time-mode :wk "Display Time")
   "l"     '(display-line-numbers-mode :wk "Toogle line numbers")
@@ -716,7 +780,7 @@ Directory for storing native comp cache
   :prefix "SPC f"
   :wk "File..."
   "s"     '(save-buffer :wk "Save Buffer")
-  "/"    '(find-file-in-/ :wk "Find in `// dir'")
+  "/"    '(find-file-in-/ :wk "Find in '/'")
   "g"     '(sudo-find-file :wk "Sudo find")
   "e"     '(rename-file :wk "Rename File")
   "d"     '(delete-file :wk "Delete File")
@@ -735,7 +799,7 @@ Directory for storing native comp cache
 #+begin_src emacs-lisp
 (leader-key-SPC
   :prefix "SPC g"
-  :wk "Magit..."
+  :which-key "Magit..."
   "s"     '(magit-stage-modified :wk "Stage")
   "l"     '(magit-log :wk "Commig Log")
   "u"     '(magit-unstage :wk "Stage")
@@ -921,9 +985,20 @@ Directory for storing native comp cache
   "v" '(elpaca-visit :wk "Visit a pkg's local repo")
   "u" '(elpaca-fetch-all :wk "Update packages")
   "d" '(elpaca-delete :wk "Delete package")
+  "i" '(elpaca-info :wk "Package info")
   "b" '(elpaca-browse :wk "Visit a pkg's remote repo")
   "m" '(elpaca-manager :wk "Elpaca"))
  
+#+end_src
+
+**** Isearch
+#+begin_src emacs-lisp
+(general-define-key
+ :keymaps 'swiper-isearch-map
+ "C-j" 'next-line
+ "C-k" 'previous-line
+ "C-r" 'swiper-query-replace)
+
 #+end_src
 
 ** Vertico
@@ -1023,6 +1098,8 @@ Directory for storing native comp cache
          ("C-M-j" . persp-switch-to-buffer*)
          :map minibuffer-local-map
          ("C-r" . consult-history))
+  :config
+  (setq consult-async-min-input 2)
   :custom
   (consult-project-root-function #'dw/get-project-root)
   (completion-in-region-function #'consult-completion-in-region))
@@ -1083,13 +1160,14 @@ Directory for storing native comp cache
 #+begin_src emacs-lisp
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
-(defun toggle-transparency ()
+(defun toggle-transparency (&optional alpha)
+  "Toggle emacs window transparency"
   (interactive)
   (let ((current-alpha (or (frame-parameter nil 'alpha-background) 100)))
     (set-frame-parameter
      nil 'alpha-background
      (if (= current-alpha 100)
-         80
+         (if alpha alpha 70)
        100))))
 
 
@@ -1395,6 +1473,10 @@ command and run the project."
   (interactive)
   (wrap-- "/"))
 
+(defun arkomacs-org-wrap-underline ()
+  (interactive)
+  (wrap-- "_"))
+
 (defun insert-current-date ()
   (interactive)
   (insert (format-time-string "%b %d, %a")))
@@ -1431,50 +1513,9 @@ command and run the project."
 #+end_src
 
 * UI Config
-** Doom Modeline
-#+begin_src emacs-lisp
-(use-package doom-modeline
-  :demand t
-  :init
-  (setq doom-modeline-height                 26
-        doom-modeline-buffer-file-name-style 'truncate-from-project
-        doom-modeline--vcs-icon              " "
-        display-time-format                  " %H:%M:%S "
-        display-time-interval                1
-        doom-modeline-icon                   t
-        doom-modeline-mu4e                   t
-        doom-modeline-buffer-encoding nil)
-  (display-time-mode 1)
-  (doom-modeline-mode 1)
-
-  :config
-  (doom-modeline-def-modeline 'main
-    '(bar
-      window-number modals
-      matches buffer-info
-      remote-host checker
-      parrot selection-info
-      buffer-position)
-    '(objed-state
-      persp-name
-      battery
-      irc mu4e
-      gnus github
-      debug
-      misc-info lsp
-      minor-modes input-method
-      indent-info buffer-encoding
-      major-mode vcs " ")))
-
-(add-hook 'treemacs-mode-hook #'hide-mode-line-mode)
-
-#+end_src
-
 ** Treesitter
 #+begin_src emacs-lisp
 (require 'treesit)
-;; (setq treesit-extra-load-path (concat user-emacs-directory "var/tree-sitter/"))
-
 (setq treesit-language-source-alist
    '((bash            "https://github.com/tree-sitter/tree-sitter-bash")
      (org             "https://github.com/milisims/tree-sitter-org")
@@ -1504,12 +1545,11 @@ command and run the project."
 (setq major-mode-remap-alist
  '((yaml-mode             . yaml-ts-mode)
    (bash-mode             . bash-ts-mode)
-   (bash-mode             . bash-ts-mode)
    (go-mode               . go-ts-mode)
    (rust-mode             . rust-ts-mode)
    (shell-script-mode     . bash-ts-mode)
-   (js2-mode              . js-ts-mode)
-   (typescript-mode       . typescript-ts-mode)
+   ;; (js2-mode              . js-ts-mode)
+   ;; (typescript-mode       . typescript-ts-mode)
    (json-mode             . json-ts-mode)
    (css-mode              . css-ts-mode)
    (python-mode           . python-ts-mode)))
@@ -1557,6 +1597,7 @@ command and run the project."
   :init
   (setq company-box-scrollbar nil
 	company-box-tooltip-maximum-width 140
+	company-box-icons-alist 'company-box-icons-idea
 	company-box-backends-colors
 	'((company-yasnippet :all "lime green" :selected
 			     (:background "lime green" :foreground "black"))
@@ -1665,7 +1706,10 @@ command and run the project."
 
 (use-package lsp-treemacs
   :elpaca (:host github :repo "scott-astatine/lsp-treemacs")
-  :after lsp)
+  :after lsp
+  :config
+  (setq lsp-treemacs-theme "nerd-icons"
+	lsp-treemacs-sync-mode t))
 
 #+end_src
 
@@ -1697,32 +1741,6 @@ command and run the project."
     ([remap describe-command] . helpful-command)
     ([remap describe-variable] . helpful-variable)
     ([remap describe-key] . helpful-key))
-
-#+end_src
-
-** Centaur Tabs
-#+begin_src emacs-lisp
-;; (use-package centaur-tabs
-;;   :demand t
-;;   :config
-;;   (setq centaur-tabs-style "rounded"
-;;         centaur-tabs-height 26
-;;         centaur-tabs-set-icons t
-;;         centaur-tabs-set-modified-marker t
-;;         centaur-tabs-show-navigation-buttons t
-;;         centaur-tabs-set-bar 'under
-;;         x-underline-at-descent-line t)
-;;   (centaur-tabs-headline-match)
-;;   ;; (setq centaur-tabs-gray-out-icons 'buffer)
-;;   ;; (centaur-tabs-enable-buffer-reordering)
-;;   ;; (setq centaur-tabs-adjust-buffer-order t)
-;;   (setq centaur-tabs-set-bar 'under)
-;;   ;; Note: If you're not using Spacmeacs, in order for the underline to display
-;;   ;; correctly you must add the following line:
-;;   (setq x-underline-at-descent-line t)
-;;   :bind
-;;   ("C-<tab>" . centaur-tabs-forward)
-;;   ("C-<iso-lefttab>" . centaur-tabs-backward))
 
 #+end_src
 
@@ -1769,23 +1787,39 @@ command and run the project."
         lsp-headerline-arrow ""
         lsp-restart 'ignore
         lsp-enable-completion-at-point t
+	lsp-log-io nil
         lsp-diagnostics-provider 'flycheck)
   (lsp-enable-which-key-integration t))
 
+#+end_src
+*** Peek
+#+begin_src emacs-lisp
 (use-package lsp-ui
   :after lsp-mode
   :config
   (lsp-ui-mode)
   (lsp-ui-doc-enable t)
+  (lsp-ui-peek-mode)
   (setq lsp-ui-doc-delay 0.4
         lsp-ui-doc-position 'top
         lsp-ui-doc-max-height 12
         lsp-ui-doc-max-width 90
         lsp-ui-doc-show-with-cursor t
+
+	lsp-ui-peek-fontify 'always
+
+	lsp-ui-sideline-show-diagnostics t
+	lsp-ui-sideline-show-hover nil
+	lsp-ui-sideline-show-code-actions nil
+	lsp-ui-sideline-show-symbol nil
         lsp-ui-doc-show-with-mouse t))
 
-#+end_src
 
+(general-define-key
+ :states 'normal
+ :keymaps 'lsp-ui-peek-mode-map
+ "")
+#+end_src
 *** Keymaps
 #+begin_src emacs-lisp
 (defun lsp-outline()
@@ -1802,7 +1836,6 @@ command and run the project."
  "TAB"   nil
  "<f2>"  'lsp-rename
  "<f7>"  'lsp-clangd-find-other-file
- "K"     'lsp-describe-thing-at-point
  "C-l f" 'lsp-ui-doc-focus-frame
  "C-l o" 'lsp-outline
  "C-l u" 'lsp-ui-doc-unfocus-frame)
@@ -1810,7 +1843,7 @@ command and run the project."
 
 (general-define-key
  :keymaps 'lsp-mode-map
- :states 'normal
+ :states '(normal visual)
  "gd" 'lsp-find-definition
  "gr" 'lsp-find-references
  "K"  'lsp-describe-thing-at-point)
@@ -1850,21 +1883,21 @@ command and run the project."
 
 ** DAP mode
 #+begin_src emacs-lisp
-(use-package dap-mode
-  :custom
-  (lsp-enable-dap-auto-configure nil)
-  :config
-  (dap-ui-mode 1)
-  :config
-  ;; Set up Node debugging
-  (require 'dap-node)
-  (dap-node-setup) ;; Automatically installs Node debug adapter if needed
+;; (use-package dap-mode
+;;   :custom
+;;   (lsp-enable-dap-auto-configure nil)
+;;   :config
+;;   (dap-ui-mode 1)
+;;   :config
+;;   ;; Set up Node debugging
+;;   (require 'dap-node)
+;;   (dap-node-setup) ;; Automatically installs Node debug adapter if needed
 
-  ;; Bind `C-c l d` to `dap-hydra` for easy access
-  (general-define-key
-    :keymaps 'lsp-mode-map
-    :prefix lsp-keymap-prefix
-    "d" '(dap-hydra t :wk "debugger")))
+;;   ;; Bind `C-c l d` to `dap-hydra` for easy access
+;;   (general-define-key
+;;     :keymaps 'lsp-mode-map
+;;     :prefix lsp-keymap-prefix
+;;     "d" '(dap-hydra t :wk "debugger")))
 
 #+end_src
 
@@ -1876,7 +1909,7 @@ command and run the project."
 
 ** Ripgrep
 #+begin_src emacs-lisp
-(use-package ripgrep)
+;; (use-package ripgrep)
 #+end_src
 
 ** Rust
@@ -1954,7 +1987,7 @@ command and run the project."
 
 ** QML
 #+begin_src emacs-lisp
-(use-package qml-mode)
+;; (use-package qml-mode)
 #+end_src
 
 ** Dart & Flutter
@@ -1979,7 +2012,8 @@ command and run the project."
   (setq lsp-pylsp-plugins-pycodestyle-enabled nil
         lsp-pylsp-plugins-pylint-enabled t)
 
-  (require 'dap-python))
+  ;; (require 'dap-python)
+  )
 
 #+end_src
 
@@ -1999,12 +2033,13 @@ command and run the project."
 
 ** Gnuplot
 #+begin_src emacs-lisp
-(use-package gnuplot)
+;; (use-package gnuplot)
 
 #+end_src
+
 ** Julia
 #+begin_src emacs-lisp
-(use-package julia-mode)
+;; (use-package julia-mode)
 
 #+end_src
 
@@ -2053,28 +2088,30 @@ command and run the project."
 (use-package lua-mode)
 #+end_src
 
-** Nim
+** Javascript/TypeScript/Reactjs
 #+begin_src emacs-lisp
-(use-package nim-mode
-    :hook (nim-mode . lsp))
-#+end_src
-
-** Web-Mode
-#+begin_src emacs-lisp
-
 (use-package web-mode
   :gfhook #'lsp
+  :config
+  (setq lsp-eslint-enable nil)
+  (setq web-mode-markup-indent-offset 2
+	web-mode-code-indent-offset 2
+	web-mode-css-indent-offset 2)
   :mode (("\\.[tj]sx\\'" . web-mode)
          ("\\.[tj]s\\'"  . web-mode)
          ("\\.html\\'"   . web-mode)))
 
+(use-package emmet-mode
+  :hook
+  (web-mode . emmet-mode))
+
+(use-package prettier
+  :config
+  (setenv "NODE_PATH" "/usr/lib/node_modules")
+  :hook
+  (web-mode . prettier-mode))
+
 (use-package lsp-tailwindcss)
-
-#+end_src
-
-** Emmet
-#+begin_src emacs-lisp
-(use-package emmet-mode)
 #+end_src
 
 ** LaTex
@@ -2173,7 +2210,7 @@ command and run the project."
 		(add-hook 'after-save-hook
 			  (lambda ()
 			    (if latex-compile-on-save
-				(compile-latex))))))
+				(compile-latex))) nil t)))
     (add-hook 'TeX-after-compilation-finished-functions
               (lambda (proc)
                 (refresh-pdfview-buffer)))
@@ -2316,10 +2353,11 @@ command and run the project."
   (variable-pitch-mode t)
   (hs-minor-mode t)
   (yas-minor-mode)
-  (visual-line-mode 1))
+  (visual-line-mode 1)
+  (add-hook 'window-configuration-change-hook #'arkomacs-org-font-setup nil t))
 
 (defun arkomacs-org-mode-visual-fill()
-  (setq visual-fill-column-width 130
+  (setq visual-fill-column-width 115
 	visual-fill-column-enable-sensible-window-split t
         visual-fill-column-center-text t)
   (visual-fill-column-mode 1))
@@ -2491,7 +2529,7 @@ command and run the project."
 #+begin_src emacs-lisp
 (leader-key-SPC
   :prefix "SPC n"
-  "l"  'org-roam-buffer-toggle
+  ;; "l"  'org-roam-buffer-toggle
   "f"  'org-roam-node-find
   "g"  'org-roam-graph
   "i"  'org-roam-node-insert
@@ -2513,7 +2551,8 @@ command and run the project."
 
 (general-define-key
  :keymaps 'org-mode-map
- :states '(insert normal visual)
+ ;; :states '(insert normal visual)
+ "S-RET" 'org-meta-return
  "<f12>" 'org-meta-return)
 
 (general-define-key
@@ -2528,12 +2567,14 @@ command and run the project."
   "c" '(arkomacs-org-wrap-code :wk "Wrap Code")
   "b" '(arkomacs-org-wrap-bold :wk "Wrap Bold")
   "i" '(arkomacs-org-wrap-italics :wk "Wrap italics")
+  "u" '(arkomacs-org-wrap-underline :wk "Wrap Underline")
   "x" '(arkomacs-org-wrap-strike :wk "Stike Seletion")
   "v" '(arkomacs-org-wrap-verbatim :wk "Wrap Verbatim")) 
 
 (leader-key-m
   :keymaps 'org-mode-map
   :states '(visual normal)
+  "e" '(org-latex-export-to-pdf :wk "Export PDF")
   "r" '(org-ctrl-c-ctrl-c :wk "Run Code block")
   "s" '(org-edit-special :wk "Org Edit Special")
   "o" '(consult-org-heading :wk "Outline")
@@ -2574,7 +2615,7 @@ command and run the project."
 ** Pdf Mode
 *** Setup
 #+begin_src emacs-lisp
-;;; Pdf mode setup
+;;;;;; Pdf mode setup
 (defvar pdf-themed--mode-state-file (concat user-emacs-directory "var/pdf-themed-mode-state"))
 (defvar pdf-themed--mode nil)
 
@@ -2601,28 +2642,21 @@ command and run the project."
 
 (add-hook 'pdf-annot-list-mode-hook #'hide-mode-line-mode)
 
-;; (evil-set-initial-state 'pdf-view-mode 'emacs)
-(add-hook 'pdf-view-mode-hook
-  (lambda ()
-    (set (make-local-variable 'evil-emacs-state-cursor) (list nil))))
+(defun custom-pdf-view-mode-hook ()
+  (set (make-local-variable 'evil-normal-state-cursor) (list nil))
+    (if (= 1 pdf-themed--mode)
+	(pdf-view-themed-minor-mode))
+    (setq-local evil-normal-state-cursor (list nil))
+    (add-hook 'window-configuration-change-hook #'pdf-view-center-in-window nil t))
 
-(add-hook 'pdf-view-mode-hook
-	  (lambda ()
-	    (progn
-	      (if (= 1 pdf-themed--mode)
-		  (pdf-view-themed-minor-mode))
-	      ;; (blink-cursor-mode -1)
-	      (setq-local evil-normal-state-cursor '(bar . 0)
-			  blink-cursor-mode nil
-			  visible-cursor nil)
-	      )))
+
+(add-hook 'pdf-view-mode-hook #'custom-pdf-view-mode-hook)
 
 (add-hook 'pdf-view-themed-minor-mode-hook
 	  (lambda ()
-	    (progn
-	      (if pdf-view-themed-minor-mode
-		  (setq pdf-themed--mode 1)
-		(setq pdf-themed--mode -1)))))
+	    (if pdf-view-themed-minor-mode
+		(setq pdf-themed--mode 1)
+	      (setq pdf-themed--mode -1))))
 
 (defun save-pdf-themed--mode-state ()
   "Save pdf-themed--mode state"
@@ -2657,11 +2691,9 @@ command and run the project."
   (pdf-outline)
   (pdf-outline-move-to-current-page)
 ;; After opening the outline
-  (setq cursor-type '(bar . 0))
-  (setq-local evil-normal-state-cursor '(bar . 0))
+  (setq-local evil-normal-state-cursor (list nil))
   (if (not pdf-outline-buffer-exists)
       (set-window-width 50)))
-
 
 (defun pdf-outl ()
   (interactive)
@@ -2669,29 +2701,24 @@ command and run the project."
   (evil-scroll-line-to-center nil)
   (set-window-dedicated-p (selected-window) t))
 
-(defun follow-current-pdf-outline ()
+(defun pdf-outline-goto-link ()
   (interactive)
   (pdf-outline-display-link)
   (pdf-outline-select-pdf-window))
-
-(defun pdf-outline-qui ()
-  (interactive)
-  (kill-this-buffer)
-  (quit-window))
 
 (defun pdf-outline-kill ()
   (interactive)
   (dolist (buffer (buffer-list))
     (if (buffer-name buffer)
 	(if (string-match "*Outline*" (buffer-name buffer))
-	    (kill-buffer (buffer-name buffer))))))
+	    (and (kill-buffer (buffer-name buffer)) (pdf-view-center-in-window))))))
 
 (defun open-thought-bubble ()
   (interactive)
   (split-window-horizontally)
   (windmove-right)
   (set-window-width 90)
-  (find-file "~/Bücher/Personal/ThoughtBubble.org"))
+  (find-file (expand-file-name "~/Bücher/Personal/ThoughtBubble.org")))
 
 ;; (setq pdf-annot-minor-mode-map-prefix "a")
 (general-def 'normal 'pdf-view-mode-map
@@ -2727,7 +2754,7 @@ command and run the project."
   "x" 'pdf-outline-kill)
 
 (general-def 'normal 'pdf-outline-buffer-mode-map
-  "f" 'follow-current-pdf-outline
+  "f" 'pdf-outline-goto-link
   "o" 'outline-toggle-children
   "l" 'outline-cycle
   "h" 'outline-up-heading
@@ -2752,7 +2779,7 @@ command and run the project."
 #+begin_src emacs-lisp
 (use-package nov
   :init
-  (setq nov-text-width t
+  (setq nov-text-width nil
         visual-fill-column-center-text t
         nov-text-width nil
         nov-unzip-program (executable-find "bsdtar")
@@ -2760,18 +2787,23 @@ command and run the project."
 
 
   :config
-  (add-hook 'nov-mode-hook
-            (lambda ()
-              (setq word-wrap t
-                    visual-fill-column-width 90
-                    nov-text-width visual-fill-column-width)
-
-              (display-line-numbers-mode 0)
-              (visual-line-mode)
-              (hl-line-mode)
-              (visual-fill-column-mode)))
 
   (add-to-list 'auto-mode-alist '("\\.epub\\'" . nov-mode)))
+
+(defun custom-nov-mode-hook ()
+  (setq word-wrap t
+        visual-fill-column-width 90
+        ;; nov-text-width visual-fill-column-width
+	)
+
+  (display-line-numbers-mode 0)
+  (visual-line-mode)
+  (hl-line-mode)
+  (visual-fill-column-mode)
+  (add-hook 'window-configuration-change-hook #'nov-render-document nil t))
+
+;;;;;; Hook
+(add-hook 'nov-mode-hook #'custom-nov-mode-hook)
 
 (progn
   (require 'justify-kp)
@@ -2808,7 +2840,7 @@ command and run the project."
 
 *** Keymaps
 #+begin_src emacs-lisp
-(general-def 'normal 'nov-mode-map
+(general-define-key :states '(normal visual) :keymaps 'nov-mode-map
   "gh" 'nov-history-back
   "gf" 'nov-history-forward
   "d"  'evil-scroll-down
@@ -2833,6 +2865,7 @@ command and run the project."
 
 ** mu4e
 #+begin_src emacs-lisp
+;;;;;; mu4e
   (defvar mu4e-inbox-folder nil)
 
   (defun generate-mu4e-context (email context-name root-folder user-name)
@@ -2989,6 +3022,8 @@ command and run the project."
 (use-package telega
   :config
   (setq telega-server-libs-prefix "/opt/tdlib-tg"
+	telega-translate-to-language-by-default "de"
+	telega-translate-replace-content t
 	telega-filter-default 'all))
 
 (add-hook 'telega-chat-mode-hook
@@ -2996,7 +3031,7 @@ command and run the project."
 	    (progn
 	      (display-line-numbers-mode 0)
 	      (tabnine-mode)
-	      (setq-local visual-fill-column-width 78))))
+	      (setq-local visual-fill-column-width 70))))
 
 (add-hook 'telega-root-mode-hook
 	  (lambda ()
@@ -3110,122 +3145,10 @@ command and run the project."
 
 #+end_src
 
-** Emms
-*** Setup
-#+begin_src emacs-lisp
-;; (use-package emms
-;;     :config
-;;     (emms-all)
-;;     (emms-default-players)
-;;     (setq emms-source-file-default-directory "~/Music"
-;;             emms-info-functions '(emms-info-tinytag)
-;;             emms-playlist-buffer-name "Music"
-;;             emms-mode-line-icon-color "#cc3fc9"
-;;             emms-mode-line-icon-enabled-p nil
-;;             emms-volume-amixer-card 1
-;;             emms-mode-line-format "🎶 "))
-
-#+end_src
-
-*** Config
-#+begin_src emacs-lisp
-;; (require 'emms-player-simple)
-;; (require 'emms-source-file)
-;; (require 'emms-source-playlist)
-;; (setq emms-player-list '(emms-player-mpg321
-;;                         emms-player-ogg123
-;;                         emms-player-mpv
-;;                         emms-player-mplayer
-;;                         ))
-
-
-;; (defun track-title-from-file-name (file)
-;;     (with-temp-buffer
-;;     (save-excursion (insert (file-name-nondirectory (directory-file-name file))))
-;;     (ignore-error 'search-failed
-;;         (search-forward-regexp (rx "." (+ alnum) eol))
-;;         (delete-region (match-beginning 0) (match-end 0)))
-;;     (buffer-string)))
-
-;; (defun my-emms-track-description (track)
-;;     (let ((artist (emms-track-get track 'info-artist))
-;;         (title (emms-track-get track 'info-title)))
-;;     (cond ((and artist title)
-;;             (concat artist " - " title))
-;;             (title title)
-;;             ((eq (emms-track-type track) 'file)
-;;             (track-title-from-file-name (emms-track-name track)))
-;;             (t (emms-track-simple-description track)))))
-
-;; (setq emms-track-description-function 'my-emms-track-description)
-
-
-;; (cond
-;;  ;; test to see if D-Bus notifications are available
-;;  ((if (and (require 'dbus nil t)
-;; 	   (dbus-ping :session "org.freedesktop.Notifications"))
-;;       (progn
-;; 	(setq notify-method 'notify-via-dbus-notifications)
-;; 	(require 'notifications))))
-;;  ;; could use the message system otherwise
-;;  (t (setq notify-method 'notify-via-message)))
-
-;; (defun notify-via-notifications (title msg icon)
-;;   "Send notification with TITLE, MSG via `D-Bus'."
-;;   (notifications-notify
-;;    :title title
-;;    :body msg
-;;    :app-icon icon
-;;    :urgency 'low))
-
-;; (defun notify-via-messages (title msg)
-;;   "Send notification with TITLE, MSG to message."
-;;   (message "APPOINTMENT: %s" msg))
-
-;; (defun emms-notifications-dbus (track-name)
-;;   "Share track name via `D-Bus'."
-;;   (let ((icon "/usr/share/icons/breeze/apps/16@3x/umbrello.svg"))
-;;     (notify-via-notifications "EMMS is now playing:" track-name icon)))
-
-;; (defun emms-notifications-message (track-name)
-;;   "Share track name via Emacs minibuffer."
-;;   (message "EMMS is now playing: %s" track-name))
-
-;; (setq emms-player-next-function 'emms-notify-and-next)
-
-;; (defun emms-notify-and-next ()
-;;   "Send a notification of track and start next."
-;;   (emms-next-noerror)
-;;   (let ((track-name (emms-track-description (emms-playlist-current-selected-track))))
-;;     (cond
-;;      ((eq notify-method 'notify-via-dbus-notifications)
-;;       (emms-notifications-dbus track-name))
-;;      (t (emms-notifications-message track-name)))))
-
-#+end_src
-
-*** Keymaps
-#+begin_src emacs-lisp
-;; (leader-key-SPC
-;;   :prefix "SPC k" 
-;;   "n" '(emms-next :wk "Next")
-;;   "s" '(emms-stop :wk "Next")
-;;   "h" '(emms-seek-backward :wk "Seek backward")
-;;   "l" '(emms-seek-forward :wk "Seek forward")
-;;   "j" '(emms-toggle-random-playlist :wk "Sufftle")
-;;   "d" '(emms-play-directory :wk "Play the dir")
-;;   "p" '(emms-play-directory :wk "Play the dir")
-;;   "p" '(emms-previous :wk "Previous")
-;;   "rt" '(emms-toggle-repeat-track :wk "Repeat Track")
-;;   "rp" '(emms-toggle-repeat-playlist :wk "Repeat Playlist")
-;;   "SPC" '(emms-pause :wk "Play/Pause"))
-
-
-#+end_src
-
 ** eww
 *** Setup
 #+begin_src emacs-lisp
+;;;;;; EWW
 (with-eval-after-load 'eww
   (setq-local arkomacs/display-images t)
   (defun arkomacs/toggle-image-display ()
@@ -3280,6 +3203,7 @@ command and run the project."
 
 ** Dired & Ibuffer
 #+begin_src emacs-lisp
+;;;;;; Dired
 (use-package diredfl)
 
 (use-package dired-filter
@@ -3289,11 +3213,15 @@ command and run the project."
 (add-hook 'dired-mode-hook
 	  (lambda ()
 	    (progn
+	      (display-line-numbers-mode -1)
 	      (text-scale-increase +2)
 	      (dired-hide-details-mode)
 	      (dired-async-mode)
 	      (diredfl-mode)
-	      (dired-filter-mode))))
+	      (dired-filter-mode)
+	      (dired-filter-by-dot-files)
+	      ;; (visual-fill-column-mode)
+	      )))
 
 (setq dired-kill-when-opening-new-dired-buffer t
       ibuffer-default-sorting-mode 'major-mode)
@@ -3301,6 +3229,10 @@ command and run the project."
 (general-define-key
  :keymaps 'dired-mode-map
  :states 'normal
+ ;; Filter
+ "ss" 'dired-filter-mode
+ "h"  'dired-up-directory
+ "l"  'dired-find-file
  "b" 'dired-up-directory
  "DEL" 'dired-up-directory)
 
@@ -3313,7 +3245,6 @@ command and run the project."
 
 ** Visual Fill Col
 #+begin_src emacs-lisp
-
 (use-package visual-fill-column
   :config
   (setq visual-fill-column-width 160))
@@ -3350,163 +3281,6 @@ command and run the project."
 	 ("C-g" . tabnine-clear-overlay)
 	 ("M-[" . tabnine-previous-completion)
 	 ("M-]" . tabnine-next-completion)))
-
-#+end_src
-
-** Monkeytype
-#+begin_src emacs-lisp
-(use-package monkeytype)
-
-#+end_src
-
-** Journalctl
-#+begin_src emacs-lisp
-(use-package journalctl-mode)
-
-#+end_src
-* Packages
-** Async
-#+begin_src emacs-lisp
-(use-package async
-  :defer t
-  :init
-  (dired-async-mode 1))
-
-#+end_src
-
-** Magit
-#+begin_src emacs-lisp
-(use-package magit
-  :custom
-  (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
-
-;; (use-package evil-magit
-;;   :after magit)
-
-#+end_src
-
-** Nerd Commenter
-#+begin_src emacs-lisp
-(use-package evil-nerd-commenter)
-
-#+end_src
-
-** Ligatures
-#+begin_src emacs-lisp
-(use-package ligature
-  :demand t
-  :config
-  (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
-  (ligature-set-ligatures t
-   '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
-     ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
-     "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
-     "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
-     "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
-     "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
-     "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
-     "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
-     ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
-     "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
-     "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
-     "?=" "?." "??"  ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
-     "\\\\" "://"))
-  :init
-  (global-ligature-mode t))
-
-
-#+end_src
-
-** Unicode
-#+begin_src emacs-lisp
-(use-package unicode-fonts
-   :config
-    (unicode-fonts-setup))
-
-#+end_src
-
-** Emojify
-#+begin_src emacs-lisp
-(use-package emojify
-  :config
-  (setq emojify-display-style 'unicode)
-  (setq emojify-emoji-styles '(unicode)))
-
-#+end_src
-** Undo Tree
-#+begin_src emacs-lisp
-(use-package undo-fu
-  :demand t)
-
-(use-package undo-fu-session
-  :demand t
-  :config
-  (global-undo-fu-session-mode))
-
-#+end_src
-
-** Smartparens
-#+begin_src emacs-lisp
-(use-package smartparens
-  :demand t
-  :config
-  (require 'smartparens-config)
-
-  (sp-pair "$" "$" :actions '(wrap insert autoskip navigate) :when
-	   nil :unless '(sp-point-after-word-p) :pre-handlers nil
-	   :post-handlers '(("[d1]" "SPC")))
-
-  (sp-pair "'" "'" :actions '(wrap insert autoskip navigate) :when
-           nil :unless '(sp-point-after-word-p) :pre-handlers nil
-           :post-handlers '(("[d1]" "SPC")))
-
-  (sp-pair "\\[" "\\]")
-  (sp-pair "\\begin{align*}\n  " "\n\\end{align*}" :trigger "\\ba")
-  (sp-local-pair 'TeX-mode "\\left(" "\\right)" :trigger "\\l(")
-  (smartparens-global-mode))
-
-'(org-mode
-  (:open "«" :close "»" :actions (wrap insert autoskip navigate) :when
-	 (:add) :unless (:add) :pre-handlers (:add) :post-handlers
-	 (:add))
-
-  (:open "=" :close "=" :actions (wrap insert autoskip navigate) :when
-	 (:add) :unless (sp-point-after-word-p) :pre-handlers (:add)
-	 :post-handlers (("[d1]" "SPC")))
-  (:open "~" :close "~" :actions (wrap insert autoskip navigate) :when
-	 (:add) :unless (sp-point-after-word-p) :pre-handlers (:add)
-	 :post-handlers (("[d1]" "SPC")))
-  (:open "/" :close "/" :actions (wrap insert autoskip navigate) :when
-	 (:add) :unless
-	 (sp-point-after-word-p
-	  sp-org-point-after-left-square-bracket-p)
-	 :pre-handlers (:add) :post-handlers (("[d1]" "SPC")))
-  (:open "_" :close "_" :actions (wrap insert autoskip navigate) :when
-	 (:add) :unless (sp-point-after-word-p) :pre-handlers (:add)
-	 :post-handlers (:add))
-  (:open "*" :close "*" :skip-match sp--org-skip-asterisk :actions
-	 (wrap insert autoskip navigate) :when (:add) :unless
-	 (sp-point-after-word-p sp-point-at-bol-p) :pre-handlers
-	 (:add) :post-handlers (:add))
-  (:open "'" :close "'" :actions (:add) :when (:add) :unless
-	 (:add sp-lisp-in-lisp-src-block-p) :pre-handlers (:add)
-	 :post-handlers (:add)))
-
-#+end_src
-
-** Emacs Config
-#+begin_src emacs-lisp
-
-(use-package emacs :elpaca nil :config (setq ring-bell-function #'ignore))
-
-
-#+end_src
-
-** Outli
-#+begin_src emacs-lisp
-(use-package outli
-  :elpaca (:host github :repo "jdtsmith/outli")
-  :hook ((prog-mode . outli-mode)))
 
 #+end_src
 
@@ -3598,6 +3372,136 @@ command and run the project."
     "v"  'empv-play-video
     "x"  'empv-chapter-select
     "y"  'empv-youtube)
+
+#+end_src
+
+** Emacs Config
+#+begin_src emacs-lisp
+(use-package emacs :elpaca nil :config (setq ring-bell-function #'ignore))
+
+#+end_src
+
+* Packages
+** Async
+#+begin_src emacs-lisp
+(use-package async
+  :defer t
+  :init
+  (dired-async-mode 1))
+
+#+end_src
+
+** Magit
+#+begin_src emacs-lisp
+(use-package magit
+  :custom
+  (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+
+;; (use-package evil-magit
+;;   :after magit)
+
+#+end_src
+
+** Nerd Commenter
+#+begin_src emacs-lisp
+(use-package evil-nerd-commenter)
+
+#+end_src
+
+** Ligatures
+#+begin_src emacs-lisp
+(use-package ligature
+  :demand t
+  :config
+  (ligature-set-ligatures 'eww-mode '("ff" "fi" "ffi"))
+  (ligature-set-ligatures t
+   '("|||>" "<|||" "<==>" "<!--" "####" "~~>" "***" "||=" "||>"
+     ":::" "::=" "=:=" "===" "==>" "=!=" "=>>" "=<<" "=/=" "!=="
+     "!!." ">=>" ">>=" ">>>" ">>-" ">->" "->>" "-->" "---" "-<<"
+     "<~~" "<~>" "<*>" "<||" "<|>" "<$>" "<==" "<=>" "<=<" "<->"
+     "<--" "<-<" "<<=" "<<-" "<<<" "<+>" "</>" "###" "#_(" "..<"
+     "..." "+++" "/==" "///" "_|_" "www" "&&" "^=" "~~" "~@" "~="
+     "~>" "~-" "**" "*>" "*/" "||" "|}" "|]" "|=" "|>" "|-" "{|"
+     "[|" "]#" "::" ":=" ":>" ":<" "$>" "==" "=>" "!=" "!!" ">:"
+     ">=" ">>" ">-" "-~" "-|" "->" "--" "-<" "<~" "<*" "<|" "<:"
+     "<$" "<=" "<>" "<-" "<<" "<+" "</" "#{" "#[" "#:" "#=" "#!"
+     "##" "#(" "#?" "#_" "%%" ".=" ".-" ".." ".?" "+>" "++" "?:"
+     "?=" "?." "??"  ";;" "/*" "/=" "/>" "//" "__" "~~" "(*" "*)"
+     "\\\\" "://"))
+  :init
+  (global-ligature-mode t))
+
+
+#+end_src
+
+** Unicode
+#+begin_src emacs-lisp
+(use-package unicode-fonts
+   :config
+    (unicode-fonts-setup))
+
+#+end_src
+
+** Emojify
+#+begin_src emacs-lisp
+(use-package emojify
+  :config
+  (setq emojify-display-style 'unicode)
+  (setq emojify-emoji-styles '(unicode)))
+
+#+end_src
+
+** Undo-Fu
+#+begin_src emacs-lisp
+(use-package undo-fu
+  :demand t)
+
+(use-package undo-fu-session
+  :demand t
+  :config
+  (global-undo-fu-session-mode))
+
+#+end_src
+
+** Smartparens
+#+begin_src emacs-lisp
+(use-package smartparens
+  :demand t
+  :config
+  (require 'smartparens-config)
+
+  (sp-local-pair '(TeX-mode org-mode) "$" "$" :actions '(wrap insert autoskip navigate) :when
+	   nil :unless '(sp-point-after-word-p) :pre-handlers nil
+	   :post-handlers '(("[d1]" "SPC")))
+
+  (sp-pair "'" "'" :actions '(wrap insert autoskip navigate) :when
+           nil :unless '(sp-point-after-word-p) :pre-handlers nil
+           :post-handlers '(("[d1]" "SPC")))
+
+  (sp-pair "\\[" "\\]")
+  (sp-pair "\\begin{align*}\n  " "\n\\end{align*}" :trigger "\\ba")
+  (sp-local-pair 'TeX-mode "\\left(" "\\right)" :trigger "\\l(")
+  (smartparens-global-mode))
+
+#+end_src
+
+** Outli
+#+begin_src emacs-lisp
+(use-package outli
+  :elpaca (:host github :repo "jdtsmith/outli")
+  :hook ((prog-mode . outli-mode)))
+
+#+end_src
+
+** Journalctl
+#+begin_src emacs-lisp
+(use-package journalctl-mode)
+
+#+end_src
+
+** Monkeytype
+#+begin_src emacs-lisp
+(use-package monkeytype)
 
 #+end_src
 
